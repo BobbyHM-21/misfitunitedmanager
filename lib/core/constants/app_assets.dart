@@ -10,7 +10,8 @@ class AppAssets {
   static const String iconTactics = '$_basePath/icon_tactics.png';
   static const String iconTransfer = '$_basePath/icon_transfer.png';
   static const String iconClub = '$_basePath/icon_club.png';
-  
+  static const String bgPitch = '$_basePath/bg_pitch.png'; // Pastikan file ada
+  static const String ball = '$_basePath/ball.png';
   // Misc
   static const String avatarManager = '$_basePath/avatar_manager.png';
 }

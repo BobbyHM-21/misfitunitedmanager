@@ -3,6 +3,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../data/player_model.dart';
 import '../widgets/player_list_item.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../logic/squad_bloc.dart';
+import '../../logic/squad_state.dart';
 
 class SquadScreen extends StatelessWidget {
   const SquadScreen({super.key});
@@ -64,11 +67,29 @@ class SquadScreen extends StatelessWidget {
 
             // --- DAFTAR PEMAIN (LIST) ---
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: squad.length,
-                itemBuilder: (context, index) {
-                  return PlayerListItem(player: squad[index], index: index);
+              child: BlocBuilder<SquadBloc, SquadState>(
+                builder: (context, state) {
+                  // 1. Cek jika masih Loading
+                  if (state is SquadInitial) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: AppColors.electricCyan),
+                    );
+                  }
+
+                  // 2. Cek jika Data Sudah Ada
+                  if (state is SquadLoaded) {
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: state.players.length,
+                      itemBuilder: (context, index) {
+                        final player = state.players[index];
+                        return PlayerListItem(player: player, index: index);
+                      },
+                    );
+                  }
+
+                  // 3. Fallback (Jaga-jaga)
+                  return const SizedBox();
                 },
               ),
             ),

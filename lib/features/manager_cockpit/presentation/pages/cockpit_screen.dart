@@ -3,7 +3,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_assets.dart'; // Import daftar aset tadi
 import '../widgets/neon_menu_button.dart';
 import '../../../../features/squad_management/presentation/pages/squad_screen.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../logic/manager_bloc.dart';
+import '../../logic/manager_state.dart';
+import '../../../../features/squad_management/presentation/pages/tactics_screen.dart';
+import '../../../transfer_market/presentation/pages/transfer_screen.dart';
+import '../../../match_engine/presentation/pages/match_screen.dart';
 
 class CockpitScreen extends StatelessWidget {
   const CockpitScreen({super.key});
@@ -33,8 +38,34 @@ class CockpitScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
-                const SizedBox(height: 40),
-                
+                const SizedBox(height: 20),
+                            SizedBox(
+              width: double.infinity,
+              height: 60,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.electricCyan,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const MatchScreen()),
+                  );
+                },
+                child: const Text(
+                  "PLAY NEXT MATCH",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
                 // GRID MENU
                 Expanded(
                   child: GridView.count(
@@ -59,19 +90,29 @@ class CockpitScreen extends StatelessWidget {
                       ),
                       // TOMBOL 2: TAKTIK
                       NeonMenuButton(
-                        label: "TAKTIK",
-                        imagePath: AppAssets.iconTactics,
-                        glowColor: AppColors.neonYellow,
-                        delay: 200,
-                        onTap: () => print("Taktik Clicked"),
-                      ),
+                      label: "TAKTIK",
+                      imagePath: AppAssets.iconTactics,
+                      glowColor: AppColors.neonYellow,
+                      delay: 200,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const TacticsScreen()), // Import dulu
+                        );
+                      },
+                    ),
                       // TOMBOL 3: TRANSFER
                       NeonMenuButton(
                         label: "TRANSFER",
                         imagePath: AppAssets.iconTransfer,
                         glowColor: AppColors.hotPink,
                         delay: 300,
-                        onTap: () => print("Transfer Clicked"),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const TransferScreen()), 
+                          );
+                        },
                       ),
                       // TOMBOL 4: KLUB
                       NeonMenuButton(
@@ -93,50 +134,85 @@ class CockpitScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5), // Semi transparan
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: AppColors.electricCyan, width: 4),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Avatar Image (Jika ada, kalau tidak pakai Icon default)
-          CircleAvatar(
-            backgroundColor: AppColors.electricCyan,
-            radius: 25,
-            // Cek kalau file avatar ada, pakai gambar. Kalau tidak, icon.
-            backgroundImage: AssetImage(AppAssets.avatarManager), 
-            onBackgroundImageError: (_, __) => const Icon(Icons.person),
+    // GUNAKAN BLOC BUILDER DI SINI
+    return BlocBuilder<ManagerBloc, ManagerState>(
+      builder: (context, state) {
+        // Default values jika data belum siap
+        String name = "LOADING...";
+        String club = "...";
+        int money = 0;
+        String avatar = AppAssets.avatarManager; // Default
+
+        // Jika data sudah loaded, ambil isinya
+        if (state is ManagerLoaded) {
+          name = state.name;
+          club = state.clubName;
+          money = state.money;
+          // avatar = state.avatarPath; // Jika mau dinamis
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              left: BorderSide(color: AppColors.electricCyan, width: 4),
+            ),
           ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                "MANAGER: USER",
-                style: TextStyle(
-                  color: Colors.white, 
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 16,
-                  fontFamily: 'Rajdhani',
-                ),
+          child: Row(
+            children: [
+              // Avatar
+              CircleAvatar(
+                backgroundColor: AppColors.electricCyan,
+                radius: 25,
+                backgroundImage: AssetImage(avatar),
               ),
-              Text(
-                "DIVISI: 10 (ROOKIE)",
-                style: TextStyle(
-                  color: AppColors.neonYellow, 
-                  fontSize: 12,
-                  fontFamily: 'Rajdhani',
+              const SizedBox(width: 16),
+              
+              // Info Text (Expanded agar tidak overflow)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "MANAGER: $name", // Data dari BLoC
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontFamily: 'Rajdhani',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          "CLUB: $club",
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Tampilan Uang ($)
+                        Text(
+                          "\$ $money", 
+                          style: const TextStyle(
+                            color: AppColors.neonYellow,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
+              )
             ],
-          )
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 }

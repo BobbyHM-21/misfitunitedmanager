@@ -12,4 +12,17 @@ class AppColors {
   // Warna Teks
   static const Color textPrimary = Colors.white;
   static const Color textDim = Colors.white54;
+
+  static List<BoxShadow> glow(Color color) => [
+    BoxShadow(
+      color: color.withOpacity(0.6),
+      blurRadius: 10,
+      spreadRadius: 1,
+    ),
+    BoxShadow(
+      color: color.withOpacity(0.2),
+      blurRadius: 20,
+      spreadRadius: 4,
+    ),
+  ];
 }
