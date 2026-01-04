@@ -8,18 +8,10 @@ abstract class SquadEvent extends Equatable {
   List<Object> get props => [];
 }
 
-// 1. Perintah untuk memuat data pemain saat aplikasi buka
+// 1. Load Data
 class LoadSquad extends SquadEvent {}
 
-// 2. (Nanti) Perintah untuk memulihkan stamina dengan membayar
-class HealPlayer extends SquadEvent {
-  final String playerId;
-  const HealPlayer(this.playerId);
-
-  @override
-  List<Object> get props => [playerId];
-}
-// Event saat berhasil beli pemain
+// 2. Tambah Pemain (Beli)
 class AddPlayerToSquad extends SquadEvent {
   final Player newPlayer;
   const AddPlayerToSquad(this.newPlayer);
@@ -27,13 +19,25 @@ class AddPlayerToSquad extends SquadEvent {
   @override
   List<Object> get props => [newPlayer];
 }
-// Event Tukar Posisi (Misal: Cadangan masuk ke Inti)
+
+// 3. Tukar Posisi
 class SwapPlayers extends SquadEvent {
   final int index1;
   final int index2;
-
   const SwapPlayers(this.index1, this.index2);
 
   @override
   List<Object> get props => [index1, index2];
+}
+
+// 4. BARU: Kurangi Stamina Pemain Inti
+class ReduceStaminaForStarters extends SquadEvent {}
+
+// 5. BARU: Sembuhkan Pemain (Heal)
+class HealPlayer extends SquadEvent {
+  final Player player; 
+  const HealPlayer(this.player);
+
+  @override
+  List<Object> get props => [player];
 }

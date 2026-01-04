@@ -1,9 +1,9 @@
 class Player {
   final String name;
-  final String position; // GK, DEF, MID, FWD
-  final int rating; // 0-100
-  final double stamina; // 0.0 - 1.0 (Persen)
-  final String imagePath; // Foto wajah
+  final String position;
+  final int rating;
+  final double stamina; // 0.0 - 1.0
+  final String imagePath;
 
   Player({
     required this.name,
@@ -12,6 +12,23 @@ class Player {
     required this.stamina,
     required this.imagePath,
   });
+
+  // --- TAMBAHKAN INI ---
+  Player copyWith({
+    String? name,
+    String? position,
+    int? rating,
+    double? stamina,
+    String? imagePath,
+  }) {
+    return Player(
+      name: name ?? this.name,
+      position: position ?? this.position,
+      rating: rating ?? this.rating,
+      stamina: stamina ?? this.stamina,
+      imagePath: imagePath ?? this.imagePath,
+    );
+  }
 
   // --- DATA DUMMY (Sesuai tema Cyberpunk) ---
   // ... di dalam class Player ...
