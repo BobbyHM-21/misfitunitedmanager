@@ -1,5 +1,12 @@
 import '../data/match_card_model.dart';
-import '../data/goal_model.dart'; // Import model baru
+import '../data/goal_model.dart';
+
+// ENUM STATUS PERTANDINGAN
+enum MatchContext { 
+  neutral,   // Bola di tengah
+  attacking, // KITA SEDANG MENYERANG (Peluang)
+  defending  // KITA SEDANG DISERANG (Bahaya)
+}
 
 class MatchState {
   final List<MatchCard> playerHand;
@@ -9,19 +16,23 @@ class MatchState {
   final int gameMinute;
   final bool isMatchOver;
   final List<String> squadNames;
+  final List<GoalModel> matchGoals;
   
-  // BARU: Daftar Pencetak Gol
-  final List<GoalModel> matchGoals; 
+  // STATUS BARU
+  final MatchContext matchContext; // Menggantikan 'eventType' string
+  final bool isEventTriggered;     // True = Game Pause
 
   MatchState({
     this.playerHand = const [],
     this.playerScore = 0,
     this.enemyScore = 0,
-    this.lastEvent = "MATCH START!",
+    this.lastEvent = "Menunggu Kick-off...",
     this.gameMinute = 0,
     this.isMatchOver = false,
     this.squadNames = const [],
-    this.matchGoals = const [], // Default kosong
+    this.matchGoals = const [],
+    this.matchContext = MatchContext.neutral,
+    this.isEventTriggered = false,
   });
 
   MatchState copyWith({
@@ -33,6 +44,8 @@ class MatchState {
     bool? isMatchOver,
     List<String>? squadNames,
     List<GoalModel>? matchGoals,
+    MatchContext? matchContext,
+    bool? isEventTriggered,
   }) {
     return MatchState(
       playerHand: playerHand ?? this.playerHand,
@@ -43,6 +56,8 @@ class MatchState {
       isMatchOver: isMatchOver ?? this.isMatchOver,
       squadNames: squadNames ?? this.squadNames,
       matchGoals: matchGoals ?? this.matchGoals,
+      matchContext: matchContext ?? this.matchContext,
+      isEventTriggered: isEventTriggered ?? this.isEventTriggered,
     );
   }
 }

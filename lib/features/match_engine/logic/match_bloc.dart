@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/material.dart'; 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../data/match_card_model.dart';
-import '../data/goal_model.dart'; // Pastikan Anda sudah membuat file ini di langkah 1
+import '../data/goal_model.dart';
 import 'match_event.dart';
 import 'match_state.dart';
 
@@ -12,186 +14,173 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
 
   MatchBloc() : super(MatchState()) {
     
-    // 1. EVENT MATCH START
+    // 1. START MATCH
     on<StartMatch>((event, emit) {
-      // Generate 3 kartu awal untuk musuh (Smart AI default skor 0)
-      final starterHand = List.generate(3, (_) => _generateSmartEnemyCard(0));
-      
       emit(MatchState(
-        playerHand: starterHand, 
-        lastEvent: "KICK OFF!",
-        squadNames: event.squadNames, // Simpan nama pemain
-        matchGoals: [], // Reset daftar gol
+        lastEvent: "KICK OFF! Pertandingan dimulai!",
+        squadNames: event.squadNames,
+        matchContext: MatchContext.neutral,
       ));
-
-      // Reset dan Jalankan Timer (1 detik = tambah 1 menit secara pasif)
-      _tickerSubscription?.cancel();
-      _tickerSubscription = Stream.periodic(const Duration(seconds: 1), (x) => x + 1).listen((tick) {
-        add(TimerTicked(state.gameMinute + 1)); 
-      });
+      _startTimer();
     });
 
-    // 2. EVENT TIMER TICKED
+    // 2. TIMER (Jalan Cepat & Trigger Event)
     on<TimerTicked>((event, emit) {
-      if (state.isMatchOver) return;
+      // Jika game selesai atau sedang PAUSE (Event), timer stop update
+      if (state.isMatchOver || state.isEventTriggered) return;
 
-      // Cek apakah waktu habis (90 menit)
-      if (event.minute >= 90) {
-        _finishMatch(emit);
+      int newMinute = state.gameMinute + 1;
+      if (newMinute >= 90) { _finishMatch(emit); return; }
+
+      // RNG: 15% Kemungkinan terjadi EVENT PENTING setiap menit
+      int roll = _rng.nextInt(100);
+
+      if (roll < 15) {
+        // --- EVENT TERJADI ---
+        bool isMyChance = _rng.nextBool(); // 50:50 Antara Nyerang atau Diserang
+        
+        MatchContext context = isMyChance ? MatchContext.attacking : MatchContext.defending;
+        
+        // GENERATE KARTU KHUSUS (Shooting vs Defending)
+        List<MatchCard> contextCards = _generateContextHand(context);
+
+        emit(state.copyWith(
+          gameMinute: newMinute,
+          isEventTriggered: true, // PAUSE GAME
+          matchContext: context,
+          playerHand: contextCards, // Kartu baru di tangan
+          lastEvent: isMyChance 
+              ? "PELUANG! Striker kita lolos dari kawalan!" 
+              : "BAHAYA! Musuh melakukan serangan balik cepat!",
+        ));
       } else {
-        emit(state.copyWith(gameMinute: event.minute));
+        // Filler Text (Komentator biasa)
+        if (newMinute % 4 == 0) {
+           emit(state.copyWith(gameMinute: newMinute, lastEvent: _getFillerCommentary()));
+        } else {
+           emit(state.copyWith(gameMinute: newMinute));
+        }
       }
     });
 
-    // 3. EVENT PLAY CARD (INTI PERMAINAN)
+    // 3. MAIN KARTU (RESOLUSI DUEL)
     on<PlayCard>((event, emit) {
-      if (state.isMatchOver) return;
+      if (!state.isEventTriggered) return;
 
-      // --- A. LOGIKA LOMPAT WAKTU (Time Skip) ---
-      // Setiap kartu memakan waktu 10-15 menit agar game cepat selesai
-      int timeConsumed = 10 + _rng.nextInt(6); 
-      int newMinute = state.gameMinute + timeConsumed;
-
-      // Jika waktu tembus 90, game berakhir
-      if (newMinute >= 90) {
-        _finishMatch(emit);
-        return; // Stop eksekusi agar tidak ada gol di masa injury time yang lewat
-      }
-
-      // --- B. LOGIKA DUEL KARTU ---
       final playerCard = event.card;
-      
-      // AI Musuh Berpikir berdasarkan selisih skor
-      final scoreDiff = state.enemyScore - state.playerScore;
-      final enemyCard = _generateSmartEnemyCard(scoreDiff);
+      final enemyCard = _generateEnemyCard(); // Musuh counter
 
-      String resultText = "";
+      String commentary = "";
       int pScore = state.playerScore;
       int eScore = state.enemyScore;
-      
-      // Salin daftar gol saat ini agar bisa ditambah
       List<GoalModel> currentGoals = List.from(state.matchGoals);
+      
+      String heroName = state.squadNames.isNotEmpty 
+          ? state.squadNames[_rng.nextInt(state.squadNames.length)] 
+          : "Pemain Kita";
 
-      if (playerCard.type == enemyCard.type) {
-         // SERI (Draw)
-         resultText = "DRAW! Duel at $newMinute'";
-      } else if (playerCard.winsAgainst(enemyCard)) {
-        // --- GOAL PEMAIN ---
-        // Pilih nama pencetak gol secara acak dari Skuad
-        String scorer = "Unknown Player";
-        if (state.squadNames.isNotEmpty) {
-          scorer = state.squadNames[_rng.nextInt(state.squadNames.length)];
+      // LOGIKA MENANG/KALAH
+      bool playerWin = playerCard.winsAgainst(enemyCard);
+      bool draw = (playerCard.type == enemyCard.type);
+
+      // A. JIKA KITA MENYERANG (Shooting Context)
+      if (state.matchContext == MatchContext.attacking) {
+        if (playerWin) {
+          pScore++;
+          commentary = "GOAL!!! ${playerCard.name} dari $heroName merobek jala gawang!";
+          currentGoals.add(GoalModel(scorerName: heroName, minute: state.gameMinute, isEnemyGoal: false));
+        } else if (draw) {
+          commentary = "TIANG GAWANG! ${playerCard.name} nyaris masuk!";
+        } else {
+          commentary = "DITEPS! Kiper lawan membaca arah bola dengan baik.";
         }
-        
-        resultText = "GOAL! $scorer scores!";
-        pScore++;
-        
-        // Catat ke Statistik
-        currentGoals.add(GoalModel(
-          scorerName: scorer, 
-          minute: newMinute, 
-          isEnemyGoal: false
-        ));
-
-      } else {
-        // --- BLOK / GOL MUSUH ---
-        resultText = "SAVED! Enemy blocks at $newMinute'";
-        
-        // (Opsional: Aktifkan kode di bawah jika ingin musuh bisa mencetak gol juga)
-        /*
-        eScore++;
-        resultText = "GOAL CONCEDED! Enemy scores!";
-        currentGoals.add(GoalModel(
-          scorerName: "Opponent", 
-          minute: newMinute, 
-          isEnemyGoal: true
-        ));
-        */
+      } 
+      // B. JIKA KITA BERTAHAN (Defending Context)
+      else if (state.matchContext == MatchContext.defending) {
+        if (playerWin) {
+          commentary = "BERHASIL! ${playerCard.name} mematahkan serangan musuh.";
+        } else if (draw) {
+          commentary = "SAPU BERSIH! Bola dibuang jauh ke depan.";
+        } else {
+          // KALAH DUEL BERTAHAN -> RISIKO
+          if (playerCard.name == "Slide Tackle") {
+             // RISIKO PENALTI (30% Chance kalau tackle gagal)
+             if (_rng.nextInt(100) < 30) {
+               eScore++;
+               commentary = "PRUIT! PENALTI! Tackle terlambat. Gol untuk lawan.";
+               currentGoals.add(GoalModel(scorerName: "Lawan (Pen)", minute: state.gameMinute, isEnemyGoal: true));
+             } else {
+               eScore++;
+               commentary = "LOLOS! Tackle gagal, musuh mencetak gol mudah.";
+               currentGoals.add(GoalModel(scorerName: "Lawan", minute: state.gameMinute, isEnemyGoal: true));
+             }
+          } else {
+            // Intercept/Offside trap gagal
+            eScore++;
+            commentary = "GAGAL! ${playerCard.name} tidak berhasil. Gol untuk musuh.";
+            currentGoals.add(GoalModel(scorerName: "Lawan", minute: state.gameMinute, isEnemyGoal: true));
+          }
+        }
       }
 
-      // --- C. UPDATE STATE ---
-      // Hapus kartu yang dipakai
-      final newHand = List<MatchCard>.from(state.playerHand);
-      newHand.remove(playerCard);
-      
-      // Ambil kartu baru (Random/Smart AI Netral)
-      newHand.add(_generateSmartEnemyCard(0)); 
-
+      // RESUME GAME (Kembali Neutral)
       emit(state.copyWith(
-        gameMinute: newMinute, // Update waktu yang sudah melompat
-        playerHand: newHand,
+        isEventTriggered: false,
+        matchContext: MatchContext.neutral,
         playerScore: pScore,
         enemyScore: eScore,
-        lastEvent: resultText,
-        matchGoals: currentGoals, // Update daftar gol
+        lastEvent: commentary,
+        matchGoals: currentGoals,
       ));
     });
   }
 
-  // Helper untuk mengakhiri pertandingan
+  // GENERATOR KARTU SPESIFIK
+  List<MatchCard> _generateContextHand(MatchContext context) {
+    List<MatchCard> hand = [];
+    
+    if (context == MatchContext.attacking) {
+      // OPSI MENYERANG
+      hand.add(MatchCard(name: "Power Shot", type: CardType.attack, category: CardCategory.shooting, power: 80, color: Colors.red, icon: Icons.sports_soccer));
+      hand.add(MatchCard(name: "Chip Shot", type: CardType.skill, category: CardCategory.shooting, power: 75, color: Colors.amber, icon: Icons.upload));
+      hand.add(MatchCard(name: "Place Shot", type: CardType.defend, category: CardCategory.shooting, power: 70, color: Colors.blue, icon: Icons.gps_fixed)); 
+    } else {
+      // OPSI BERTAHAN
+      hand.add(MatchCard(name: "Slide Tackle", type: CardType.attack, category: CardCategory.defending, power: 85, color: Colors.red, icon: Icons.warning));
+      hand.add(MatchCard(name: "Offside Trap", type: CardType.skill, category: CardCategory.defending, power: 70, color: Colors.amber, icon: Icons.flag));
+      hand.add(MatchCard(name: "Intercept", type: CardType.defend, category: CardCategory.defending, power: 75, color: Colors.blue, icon: Icons.shield));
+    }
+    return hand;
+  }
+
+  MatchCard _generateEnemyCard() {
+    int r = _rng.nextInt(3);
+    if (r == 0) return MatchCard(name: "Block", type: CardType.defend, category: CardCategory.neutral, power: 70);
+    if (r == 1) return MatchCard(name: "Dribble", type: CardType.skill, category: CardCategory.neutral, power: 70);
+    return MatchCard(name: "Shoot", type: CardType.attack, category: CardCategory.neutral, power: 70);
+  }
+
+  void _startTimer() {
+    _tickerSubscription?.cancel();
+    // Speed: 600ms = 1 menit game
+    _tickerSubscription = Stream.periodic(const Duration(milliseconds: 600), (x) => x).listen((_) {
+      add(TimerTicked(0));
+    });
+  }
+
   void _finishMatch(Emitter<MatchState> emit) {
     _tickerSubscription?.cancel();
-    emit(state.copyWith(
-      gameMinute: 90,
-      isMatchOver: true,
-      lastEvent: "FULL TIME! WHISTLE BLOWN!",
-    ));
+    emit(state.copyWith(gameMinute: 90, isMatchOver: true, isEventTriggered: false, lastEvent: "FULL TIME!"));
+  }
+  
+  String _getFillerCommentary() {
+    List<String> t = ["Bola bergulir di lini tengah.", "Kedua tim bermain hati-hati.", "Sorakan penonton terdengar riuh.", "Pelatih memberi instruksi dari pinggir lapangan.", "Operan pendek yang rapi diperagakan."];
+    return t[_rng.nextInt(t.length)];
   }
 
   @override
   Future<void> close() {
     _tickerSubscription?.cancel();
     return super.close();
-  }
-
-  // --- LOGIKA AI CERDAS (SMART ENEMY) ---
-  MatchCard _generateSmartEnemyCard(int scoreDiff) {
-    int roll = _rng.nextInt(100);
-    CardType selectedType;
-
-    if (scoreDiff < 0) { 
-      // Musuh Kalah -> Panik Menyerang (Agresif)
-      if (roll < 60) {
-        selectedType = CardType.attack;      
-      } else if (roll < 90) {
-        selectedType = CardType.skill;  
-      } else {
-        selectedType = CardType.defend;                
-      }
-    } else if (scoreDiff > 0) { 
-      // Musuh Menang -> Parkir Bus (Defensif)
-      if (roll < 60) {
-        selectedType = CardType.defend;      
-      } else if (roll < 90) {
-        selectedType = CardType.skill;
-      } else {
-        selectedType = CardType.attack;
-      }
-    } else { 
-      // Seri -> Seimbang
-      if (roll < 33) {
-        selectedType = CardType.attack;
-      } else if (roll < 66) {
-        selectedType = CardType.defend;
-      } else {
-        selectedType = CardType.skill;
-      }
-    }
-
-    // Power dan Nama Kartu
-    final power = 50 + _rng.nextInt(51); // 50-100
-    String name = "Action";
-    
-    if (selectedType == CardType.attack) {
-      name = ["Power Shot", "Volley", "Header", "Counter"][_rng.nextInt(4)];
-    }
-    if (selectedType == CardType.skill) {
-      name = ["Through Pass", "Dribble", "Rabona", "Tiki-Taka"][_rng.nextInt(4)];
-    }
-    if (selectedType == CardType.defend) {
-      name = ["Tackle", "Block", "Intercept", "Offside Trap"][_rng.nextInt(4)];
-    }
-
-    return MatchCard(name: name, type: selectedType, power: power);
   }
 }
