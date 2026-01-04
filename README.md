@@ -38,7 +38,7 @@ Fokus saat ini: Struktur kompetisi jangka panjang.
   - Integrasi hasil Match pemain ke klasemen.
 - [x] **AI Simulation:**
   - Simulasi skor otomatis untuk 9 tim musuh (Cyber FC, Neon City, dll) setiap matchday.
-- [ ] **Season Schedule (Fixtures):**
+- [x] **Season Schedule (Fixtures):**
   - Jadwal pertandingan terstruktur (Matchday 1 - 38) vs Lawan spesifik.
   - Reset musim setelah liga berakhir.
 - [ ] **Player Progression (RPG):**

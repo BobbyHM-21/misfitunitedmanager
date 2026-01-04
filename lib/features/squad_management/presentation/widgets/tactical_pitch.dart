@@ -85,7 +85,7 @@ class TacticalPitch extends StatelessWidget {
             ),
             child: CircleAvatar(
               radius: 18,
-              backgroundImage: AssetImage(player.imagePath),
+              backgroundImage: player.imagePath != null ? AssetImage(player.imagePath!) : null,
               backgroundColor: Colors.black,
             ),
           ),

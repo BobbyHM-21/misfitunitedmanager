@@ -16,7 +16,6 @@ class AddPlayerToSquad extends SquadEvent {
   List<Object> get props => [player];
 }
 
-// Event untuk menyembuhkan satu pemain
 class RecoverStamina extends SquadEvent {
   final Player player;
   const RecoverStamina(this.player);
@@ -24,7 +23,6 @@ class RecoverStamina extends SquadEvent {
   List<Object> get props => [player];
 }
 
-// [BARU] Event untuk menyembuhkan SEMUA pemain
 class RecoverAllStamina extends SquadEvent {}
 
 class ReduceStaminaForStarters extends SquadEvent {}
@@ -36,12 +34,26 @@ class SellPlayer extends SquadEvent {
   List<Object> get props => [player];
 }
 
-// [BARU] Event Drag & Drop (Geser Posisi)
 class ReorderSquad extends SquadEvent {
   final int oldIndex;
   final int newIndex;
   const ReorderSquad(this.oldIndex, this.newIndex);
-  
   @override
   List<Object> get props => [oldIndex, newIndex];
+}
+
+// [BARU] Event untuk Update Statistik Pasca-Match
+class UpdatePlayerMatchStats extends SquadEvent {
+  final Map<String, int> goalScorers; // Nama: Jumlah Gol
+  final Map<String, int> assistMakers; // Nama: Jumlah Assist
+  final Map<String, double> matchRatings; // Nama: Rating Match Ini
+  
+  const UpdatePlayerMatchStats({
+    required this.goalScorers,
+    required this.assistMakers,
+    required this.matchRatings,
+  });
+
+  @override
+  List<Object> get props => [goalScorers, assistMakers, matchRatings];
 }

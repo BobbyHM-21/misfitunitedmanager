@@ -7,6 +7,7 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
   List<Player> _currentSquad = [];
 
   SquadBloc() : super(SquadInitial()) {
+    // Init Data
     _currentSquad = List.from(Player.dummySquad);
     
     on<LoadSquad>((event, emit) {
@@ -20,16 +21,12 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
       }
     });
 
-    // [BARU] LOGIKA DRAG & DROP
     on<ReorderSquad>((event, emit) {
       if (state is SquadLoaded) {
         int newIndex = event.newIndex;
-        if (newIndex > event.oldIndex) {
-          newIndex -= 1;
-        }
+        if (newIndex > event.oldIndex) newIndex -= 1;
         final Player item = _currentSquad.removeAt(event.oldIndex);
         _currentSquad.insert(newIndex, item);
-        
         emit(SquadLoaded(List.from(_currentSquad)));
       }
     });
@@ -51,7 +48,6 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
       }
     });
 
-    // [BARU] LOGIKA HEAL ALL
     on<RecoverAllStamina>((event, emit) {
       if (state is SquadLoaded) {
         for (int i = 0; i < _currentSquad.length; i++) {
@@ -66,8 +62,51 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
         for (int i = 0; i < _currentSquad.length; i++) {
           if (i < 11) { 
             final p = _currentSquad[i];
-            final newStamina = (p.stamina - 0.15).clamp(0.0, 1.0);
+            final newStamina = (p.stamina - 0.1).clamp(0.0, 1.0);
             _currentSquad[i] = p.copyWith(stamina: newStamina);
+          }
+        }
+        emit(SquadLoaded(List.from(_currentSquad)));
+      }
+    });
+
+    // [BARU] LOGIC UPDATE STATISTIK
+    on<UpdatePlayerMatchStats>((event, emit) {
+      if (state is SquadLoaded) {
+        // Hanya update 11 pemain pertama (Starter) karena cuma mereka yang main
+        for (int i = 0; i < _currentSquad.length; i++) {
+          // Cek apakah dia Starter (Index 0-10)
+          if (i < 11) {
+            Player p = _currentSquad[i];
+            String name = p.name;
+
+            // 1. Tambah Jumlah Main (Apps)
+            int newApps = p.seasonAppearances + 1;
+
+            // 2. Tambah Gol
+            int goalsToAdd = event.goalScorers[name] ?? 0;
+            int newGoals = p.seasonGoals + goalsToAdd;
+
+            // 3. Tambah Assist
+            int assistsToAdd = event.assistMakers[name] ?? 0;
+            int newAssists = p.seasonAssists + assistsToAdd;
+
+            // 4. Hitung Rata-rata Rating Baru
+            double matchRating = event.matchRatings[name] ?? 6.0;
+            // Rumus Running Average: ((OldAvg * OldApps) + NewRating) / NewApps
+            double totalRatingScore = (p.averageRating * p.seasonAppearances) + matchRating;
+            // Jika ini match pertama, averageRating awal (6.0) tidak dihitung, langsung pakai matchRating
+            if (p.seasonAppearances == 0) totalRatingScore = matchRating;
+            
+            double newAvgRating = double.parse((totalRatingScore / newApps).toStringAsFixed(1));
+
+            // Simpan Update
+            _currentSquad[i] = p.copyWith(
+              seasonAppearances: newApps,
+              seasonGoals: newGoals,
+              seasonAssists: newAssists,
+              averageRating: newAvgRating,
+            );
           }
         }
         emit(SquadLoaded(List.from(_currentSquad)));

@@ -8,12 +8,15 @@ import '../widgets/neon_menu_button.dart';
 import '../../logic/manager_bloc.dart';
 import '../../logic/manager_state.dart';
 
-// Import Halaman Lain
+// Logic League (Untuk Jadwal)
+import '../../../league/logic/league_cubit.dart';
+import '../../../league/logic/league_state.dart';
+
+// Import Screens
 import '../../../../features/squad_management/presentation/pages/squad_screen.dart';
 import '../../../../features/squad_management/presentation/pages/tactics_screen.dart';
 import '../../../transfer_market/presentation/pages/transfer_screen.dart';
 import '../../../match_engine/presentation/pages/match_screen.dart';
-// [BARU] Import League
 import '../../../league/presentation/pages/league_screen.dart';
 
 class CockpitScreen extends StatelessWidget {
@@ -22,7 +25,7 @@ class CockpitScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // BACKGROUND IMAGE FULL SCREEN (Fitur Lama Anda)
+      // BACKGROUND IMAGE FULL SCREEN (Fitur Lama Tetap Ada)
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -46,36 +49,65 @@ class CockpitScreen extends StatelessWidget {
                 
                 const SizedBox(height: 20),
                 
-                // TOMBOL BIG MATCH (Fitur Lama Anda)
-                SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.electricCyan,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MatchScreen()),
-                      );
-                    },
-                    child: const Text(
-                      "PLAY NEXT MATCH",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                        letterSpacing: 2,
+                // TOMBOL MATCH DINAMIS (Jadwal Liga)
+                BlocBuilder<LeagueCubit, LeagueState>(
+                  builder: (context, state) {
+                    String titleText = "PLAY MATCH";
+                    String subText = "FRIENDLY MATCH";
+
+                    // Cek jika Liga sudah dimuat dan ada jadwal
+                    if (state is LeagueLoaded) {
+                      titleText = "PLAY MATCHDAY ${state.currentMatchday}";
+                      subText = "VS ${state.getNextOpponent()}";
+                    }
+
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 70,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.electricCyan,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 10,
+                          shadowColor: AppColors.electricCyan.withValues(alpha: 0.5),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MatchScreen()),
+                          );
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              titleText,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                letterSpacing: 2,
+                                fontFamily: 'Rajdhani',
+                              ),
+                            ),
+                            Text(
+                              subText,
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 20),
                 
-                // GRID MENU
+                // GRID MENU UTAMA
                 Expanded(
                   child: GridView.count(
                     crossAxisCount: 2,
@@ -122,7 +154,7 @@ class CockpitScreen extends StatelessWidget {
                           );
                         },
                       ),
-                      // [BARU] TOMBOL 4: LEAGUE (Ganti dari KLUB)
+                      // TOMBOL 4: LEAGUE (Akses Klasemen)
                       NeonMenuButton(
                         label: "LEAGUE",
                         imagePath: AppAssets.iconClub, 
