@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'features/manager_cockpit/presentation/pages/cockpit_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart'; // <-- Tambah ini
-import 'package:google_fonts/google_fonts.dart';
 import 'core/theme/app_colors.dart';
 import 'features/manager_cockpit/logic/manager_bloc.dart'; // <-- Tambah ini
 import 'features/manager_cockpit/logic/manager_event.dart'; // <-- Tambah ini

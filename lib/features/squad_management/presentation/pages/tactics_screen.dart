@@ -5,7 +5,7 @@ import '../../../../core/constants/app_assets.dart';
 import '../../logic/squad_bloc.dart';
 import '../../logic/squad_event.dart'; // Import Event Swap
 import '../../logic/squad_state.dart';
-import '../../data/player_model.dart'; // Import Model
+// Import Model
 import '../widgets/tactical_pitch.dart';
 import '../widgets/player_list_item.dart'; // Reuse list item
 
