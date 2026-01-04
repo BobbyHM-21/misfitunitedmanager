@@ -1,4 +1,4 @@
-import 'package:equatable/equatable.dart'; // Opsional, tapi bagus
+import 'package:equatable/equatable.dart';
 import '../data/match_card_model.dart';
 
 abstract class MatchEvent extends Equatable {
@@ -8,8 +8,14 @@ abstract class MatchEvent extends Equatable {
   List<Object> get props => [];
 }
 
-// 1. Event Mulai Match
-class StartMatch extends MatchEvent {}
+// 1. Event Mulai Match (Sekarang butuh daftar nama pemain)
+class StartMatch extends MatchEvent {
+  final List<String> squadNames; // Daftar nama pemain (Starting XI)
+  const StartMatch(this.squadNames);
+
+  @override
+  List<Object> get props => [squadNames];
+}
 
 // 2. Event Main Kartu
 class PlayCard extends MatchEvent {
@@ -20,7 +26,7 @@ class PlayCard extends MatchEvent {
   List<Object> get props => [card];
 }
 
-// 3. Event Detak Jam (BARU)
+// 3. Event Detak Jam
 class TimerTicked extends MatchEvent {
   final int minute;
   const TimerTicked(this.minute);
