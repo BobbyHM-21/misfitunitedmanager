@@ -12,7 +12,7 @@ import '../../../manager_cockpit/logic/manager_event.dart';
 import '../../../manager_cockpit/logic/manager_state.dart';
 import '../../../squad_management/logic/squad_bloc.dart';
 import '../../../squad_management/logic/squad_event.dart';
-import '../../../squad_management/data/player_model.dart'; // Butuh model Player
+// Butuh model Player
 
 class TransferScreen extends StatelessWidget {
   const TransferScreen({super.key});
