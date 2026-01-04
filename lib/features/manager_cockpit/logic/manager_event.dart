@@ -19,7 +19,7 @@ class UpdateManagerName extends ManagerEvent {
   List<Object> get props => [newName];
 }
 
-// 3. Event untuk transaksi uang (Beli/Jual)
+// 3. Event untuk transaksi uang (Beli/Jual/Gaji)
 class ModifyMoney extends ManagerEvent {
   final int amount; // Bisa positif (dapat uang) atau negatif (bayar)
   const ModifyMoney(this.amount);

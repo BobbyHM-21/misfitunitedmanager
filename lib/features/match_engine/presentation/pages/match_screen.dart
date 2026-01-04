@@ -3,16 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../game/the_pitch_game.dart'; 
 import '../../../../core/theme/app_colors.dart';
-import '../../data/goal_model.dart'; // Import Goal Model agar State valid
 
+// Import Logic Match
 import '../../logic/match_bloc.dart';
 import '../../logic/match_event.dart';
 import '../../logic/match_state.dart';
 
+// Import Logic Squad
 import '../../../squad_management/logic/squad_bloc.dart';
 import '../../../squad_management/logic/squad_event.dart';
 import '../../../squad_management/logic/squad_state.dart';
 import '../../../squad_management/data/player_model.dart';
+
+// Import Logic Manager (UNTUK DUIT)
+import '../../../manager_cockpit/logic/manager_bloc.dart';
+import '../../../manager_cockpit/logic/manager_event.dart';
 
 import '../widgets/hand_deck_widget.dart';
 
@@ -21,7 +26,7 @@ class MatchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ambil Nama Pemain
+    // 1. Ambil Nama Pemain dari SquadBloc
     final squadState = context.read<SquadBloc>().state;
     List<String> starterNames = [];
     if (squadState is SquadLoaded && squadState.players.isNotEmpty) {
@@ -35,13 +40,39 @@ class MatchScreen extends StatelessWidget {
       
       child: BlocListener<MatchBloc, MatchState>(
         listener: (context, state) {
-          // POPUP HASIL AKHIR
+          // --- MATCH SELESAI ---
           if (state.isMatchOver) {
+            // 1. Kurangi Stamina
             context.read<SquadBloc>().add(ReduceStaminaForStarters());
+            
+            // 2. HITUNG DUIT (REWARDS)
+            int reward = 0;
+            String resultStatus = "";
+
+            if (state.playerScore > state.enemyScore) {
+              reward = 1000; // Menang
+              resultStatus = "WIN";
+            } else if (state.playerScore == state.enemyScore) {
+              reward = 500; // Seri
+              resultStatus = "DRAW";
+            } else {
+              reward = 100; // Kalah
+              resultStatus = "LOSS";
+            }
+
+            // Bonus Gol ($50 per gol)
+            int goalBonus = state.playerScore * 50;
+            int totalEarnings = reward + goalBonus;
+
+            // 3. KIRIM KE MANAGER BLOC (TAMBAH KE DOMPET)
+            // Menggunakan event ModifyMoney yang sudah ada di event manager Anda
+            context.read<ManagerBloc>().add(ModifyMoney(totalEarnings));
+
+            // 4. TAMPILKAN POPUP
             showDialog(
               context: context,
               barrierDismissible: false,
-              builder: (_) => _buildMatchResultDialog(context, state),
+              builder: (_) => _buildMatchResultDialog(context, state, totalEarnings, resultStatus),
             );
           }
         },
@@ -66,11 +97,10 @@ class MatchScreen extends StatelessWidget {
                     // B. KOMENTATOR / EVENT BOX
                     BlocBuilder<MatchBloc, MatchState>(
                       builder: (context, state) {
-                        // Tentukan Warna Border berdasarkan Konteks
                         Color borderColor = Colors.white12;
                         String titleText = "";
                         
-                        // LOGIKA PENGGANTI 'eventType' string
+                        // Cek Context (Attacking/Defending)
                         if (state.isEventTriggered) {
                            if (state.matchContext == MatchContext.attacking) {
                              borderColor = AppColors.electricCyan;
@@ -197,32 +227,70 @@ class MatchScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchResultDialog(BuildContext context, MatchState state) {
+  // --- POPUP REWARD (DUIT) ---
+  Widget _buildMatchResultDialog(BuildContext context, MatchState state, int earnings, String status) {
      return AlertDialog(
       backgroundColor: Colors.black.withOpacity(0.95),
-      title: const Center(child: Text("FULL TIME", style: TextStyle(color: Colors.white, fontFamily: 'Rajdhani', fontSize: 24, fontWeight: FontWeight.bold))),
+      shape: RoundedRectangleBorder(side: const BorderSide(color: AppColors.electricCyan), borderRadius: BorderRadius.circular(12)),
+      
+      title: Center(
+        child: Text(
+          status, 
+          style: TextStyle(
+            color: status == "WIN" ? AppColors.electricCyan : (status == "LOSS" ? Colors.red : Colors.white), 
+            fontFamily: 'Rajdhani', fontSize: 32, fontWeight: FontWeight.bold
+          )
+        )
+      ),
+      
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-             Text("${state.playerScore} - ${state.enemyScore}", style: const TextStyle(color: AppColors.neonYellow, fontSize: 50, fontWeight: FontWeight.bold)),
-             const Divider(color: Colors.white24),
-             const SizedBox(height: 10),
+             Text(
+               "${state.playerScore} - ${state.enemyScore}", 
+               style: const TextStyle(color: AppColors.neonYellow, fontSize: 50, fontWeight: FontWeight.bold)
+             ),
+             const SizedBox(height: 20),
+             
+             // INFO GAJI
+             Container(
+               padding: const EdgeInsets.all(12),
+               decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
+               child: Column(
+                 children: [
+                   const Text("MATCH EARNINGS", style: TextStyle(color: Colors.grey, fontSize: 10, letterSpacing: 2)),
+                   const SizedBox(height: 5),
+                   Row(
+                     mainAxisAlignment: MainAxisAlignment.center,
+                     children: [
+                       const Icon(Icons.monetization_on, color: Colors.amber),
+                       const SizedBox(width: 8),
+                       Text("+\$$earnings", style: const TextStyle(color: Colors.amber, fontSize: 28, fontWeight: FontWeight.bold)),
+                     ],
+                   )
+                 ],
+               ),
+             ),
+             
+             const Divider(color: Colors.white24, height: 30),
+             
+             // GOAL LOG
              if (state.matchGoals.isEmpty)
-               const Text("No Goals", style: TextStyle(color: Colors.grey)),
+               const Text("No Goals Scored", style: TextStyle(color: Colors.grey)),
              
              Flexible(
                child: ListView(
                  shrinkWrap: true,
                  children: state.matchGoals.map((g) => Padding(
-                   padding: const EdgeInsets.symmetric(vertical: 4),
+                   padding: const EdgeInsets.symmetric(vertical: 2),
                    child: Row(
                      mainAxisAlignment: g.isEnemyGoal ? MainAxisAlignment.end : MainAxisAlignment.start,
                      children: [
                        Text(
                          "${g.minute}' ${g.scorerName}", 
-                         style: TextStyle(color: g.isEnemyGoal ? AppColors.hotPink : AppColors.electricCyan, fontWeight: FontWeight.bold)
+                         style: TextStyle(color: g.isEnemyGoal ? Colors.redAccent : Colors.cyanAccent, fontSize: 12)
                         ),
                      ],
                    ),
@@ -235,9 +303,15 @@ class MatchScreen extends StatelessWidget {
       actions: [
         Center(
           child: ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.electricCyan),
-            onPressed: () { Navigator.pop(context); Navigator.pop(context); }, 
-            child: const Text("RETURN TO CLUB", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.electricCyan, 
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)
+            ),
+            onPressed: () { 
+              Navigator.pop(context); // Tutup Dialog
+              Navigator.pop(context); // Keluar dari Match Screen
+            }, 
+            child: const Text("COLLECT & RETURN", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
           )
         )
       ],

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/constants/app_assets.dart'; // Import daftar aset tadi
-import '../widgets/neon_menu_button.dart';
-import '../../../../features/squad_management/presentation/pages/squad_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/constants/app_assets.dart';
+import '../widgets/neon_menu_button.dart';
+
+// Logic Manager
 import '../../logic/manager_bloc.dart';
 import '../../logic/manager_state.dart';
+
+// Import Halaman Lain (Pastikan path import ini sesuai folder Anda)
+import '../../../../features/squad_management/presentation/pages/squad_screen.dart';
 import '../../../../features/squad_management/presentation/pages/tactics_screen.dart';
 import '../../../transfer_market/presentation/pages/transfer_screen.dart';
 import '../../../match_engine/presentation/pages/match_screen.dart';
@@ -23,9 +27,8 @@ class CockpitScreen extends StatelessWidget {
         decoration: BoxDecoration(
           image: DecorationImage(
             image: AssetImage(AppAssets.bgCity), // Panggil Background Kota
-            fit: BoxFit.cover, // Penuhi layar
+            fit: BoxFit.cover, 
             colorFilter: ColorFilter.mode(
-              // Gelapkan gambar sedikit agar teks terbaca (Overlay Hitam)
               Colors.black.withOpacity(0.7), 
               BlendMode.darken,
             ),
@@ -37,35 +40,39 @@ class CockpitScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(),
+                _buildHeader(), // HEADER (Saldo, Nama, dll)
+                
                 const SizedBox(height: 20),
-                            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.electricCyan,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MatchScreen()),
-                  );
-                },
-                child: const Text(
-                  "PLAY NEXT MATCH",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    letterSpacing: 2,
+                
+                // TOMBOL BIG MATCH
+                SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.electricCyan,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MatchScreen()),
+                      );
+                    },
+                    child: const Text(
+                      "PLAY NEXT MATCH",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        letterSpacing: 2,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 20),
+                const SizedBox(height: 20),
+                
                 // GRID MENU
                 Expanded(
                   child: GridView.count(
@@ -81,26 +88,25 @@ class CockpitScreen extends StatelessWidget {
                         glowColor: AppColors.electricCyan,
                         delay: 100,
                         onTap: () {
-                          // NAVIGASI KE SQUAD SCREEN
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const SquadScreen()), // Error merah? Hover -> Quick Fix -> Import squad_screen.dart
+                            MaterialPageRoute(builder: (context) => const SquadScreen()),
                           );
                         },
                       ),
                       // TOMBOL 2: TAKTIK
                       NeonMenuButton(
-                      label: "TAKTIK",
-                      imagePath: AppAssets.iconTactics,
-                      glowColor: AppColors.neonYellow,
-                      delay: 200,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const TacticsScreen()), // Import dulu
-                        );
-                      },
-                    ),
+                        label: "TAKTIK",
+                        imagePath: AppAssets.iconTactics,
+                        glowColor: AppColors.neonYellow,
+                        delay: 200,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const TacticsScreen()),
+                          );
+                        },
+                      ),
                       // TOMBOL 3: TRANSFER
                       NeonMenuButton(
                         label: "TRANSFER",
@@ -134,21 +140,21 @@ class CockpitScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    // GUNAKAN BLOC BUILDER DI SINI
+    // GUNAKAN BLOC BUILDER (Cek Status ManagerLoaded)
     return BlocBuilder<ManagerBloc, ManagerState>(
       builder: (context, state) {
-        // Default values jika data belum siap
+        // Default values
         String name = "LOADING...";
         String club = "...";
         int money = 0;
-        String avatar = AppAssets.avatarManager; // Default
+        String avatar = AppAssets.avatarManager;
 
-        // Jika data sudah loaded, ambil isinya
+        // JIKA DATA SUDAH LOADED (Sesuai struktur Anda)
         if (state is ManagerLoaded) {
           name = state.name;
           club = state.clubName;
           money = state.money;
-          // avatar = state.avatarPath; // Jika mau dinamis
+          // avatar = state.avatarPath; // Jika mau custom
         }
 
         return Container(
@@ -170,13 +176,13 @@ class CockpitScreen extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               
-              // Info Text (Expanded agar tidak overflow)
+              // Info Text
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "MANAGER: $name", // Data dari BLoC
+                      "MANAGER: $name",
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -189,19 +195,24 @@ class CockpitScreen extends StatelessWidget {
                       children: [
                         Text(
                           "CLUB: $club",
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                         const Spacer(),
-                        // Tampilan Uang ($)
-                        Text(
-                          "\$ $money", 
-                          style: const TextStyle(
-                            color: AppColors.neonYellow,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                        // TAMPILAN UANG ($)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.neonYellow)
+                          ),
+                          child: Text(
+                            "\$ $money", 
+                            style: const TextStyle(
+                              color: AppColors.neonYellow,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ],

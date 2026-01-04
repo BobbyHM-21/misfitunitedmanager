@@ -8,14 +8,14 @@ class ManagerBloc extends Bloc<ManagerEvent, ManagerState> {
     
     // 1. Saat Aplikasi Mulai -> Load Data Dummy Awal
     on<LoadManagerProfile>((event, emit) async {
-      // Simulasi delay loading (biar berasa canggih)
-      await Future.delayed(const Duration(seconds: 1));
+      // Simulasi delay loading
+      await Future.delayed(const Duration(milliseconds: 500));
       
       emit(const ManagerLoaded(
-        name: "NOOB MANAGER",
-        clubName: "STREET RATS FC",
+        name: "NEON BOSS",
+        clubName: "MISFIT UNITED",
         money: 50000, // Modal Awal
-        division: 10,
+        division: 5,
         avatarPath: AppAssets.avatarManager,
       ));
     });
@@ -28,16 +28,14 @@ class ManagerBloc extends Bloc<ManagerEvent, ManagerState> {
       }
     });
 
-    // 3. Saat Uang Berubah
+    // 3. Saat Uang Berubah (Gaji Match / Beli Pemain)
     on<ModifyMoney>((event, emit) {
       if (state is ManagerLoaded) {
         final currentState = state as ManagerLoaded;
         final newMoney = currentState.money + event.amount;
         
-        // Cegah uang minus
-        if (newMoney >= 0) {
-          emit(currentState.copyWith(money: newMoney));
-        }
+        // Update state dengan uang baru
+        emit(currentState.copyWith(money: newMoney));
       }
     });
   }
