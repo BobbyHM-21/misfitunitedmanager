@@ -7,9 +7,11 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
   List<Player> _currentSquad = [];
 
   SquadBloc() : super(SquadInitial()) {
-    // Init Data
     _currentSquad = List.from(Player.dummySquad);
     
+    // ... (Event lain seperti LoadSquad, AddPlayer, Reorder tetap sama, tidak perlu dihapus) ...
+    // LANGSUNG SAJA TIMPA BAGIAN INI:
+
     on<LoadSquad>((event, emit) {
       emit(SquadLoaded(List.from(_currentSquad)));
     });
@@ -70,42 +72,54 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
       }
     });
 
-    // [BARU] LOGIC UPDATE STATISTIK
+    // [BAGIAN PENTING: LOGIC UPDATE STATISTIK & XP]
     on<UpdatePlayerMatchStats>((event, emit) {
       if (state is SquadLoaded) {
-        // Hanya update 11 pemain pertama (Starter) karena cuma mereka yang main
         for (int i = 0; i < _currentSquad.length; i++) {
-          // Cek apakah dia Starter (Index 0-10)
+          // Hanya starter (index 0-10) yang dapat update
           if (i < 11) {
             Player p = _currentSquad[i];
             String name = p.name;
 
-            // 1. Tambah Jumlah Main (Apps)
+            // 1. Update Statistik
             int newApps = p.seasonAppearances + 1;
-
-            // 2. Tambah Gol
             int goalsToAdd = event.goalScorers[name] ?? 0;
             int newGoals = p.seasonGoals + goalsToAdd;
-
-            // 3. Tambah Assist
             int assistsToAdd = event.assistMakers[name] ?? 0;
             int newAssists = p.seasonAssists + assistsToAdd;
 
-            // 4. Hitung Rata-rata Rating Baru
             double matchRating = event.matchRatings[name] ?? 6.0;
-            // Rumus Running Average: ((OldAvg * OldApps) + NewRating) / NewApps
             double totalRatingScore = (p.averageRating * p.seasonAppearances) + matchRating;
-            // Jika ini match pertama, averageRating awal (6.0) tidak dihitung, langsung pakai matchRating
             if (p.seasonAppearances == 0) totalRatingScore = matchRating;
-            
             double newAvgRating = double.parse((totalRatingScore / newApps).toStringAsFixed(1));
 
-            // Simpan Update
+            // 2. [BARU] Hitung XP
+            // Rumus: (Rating x 20) + (Gol x 100) + (Assist x 50)
+            int gainedXp = (matchRating * 20).toInt(); 
+            gainedXp += (goalsToAdd * 100);
+            gainedXp += (assistsToAdd * 50);
+            
+            int finalXp = p.currentXp + gainedXp;
+            int finalRating = p.rating;
+            int finalTargetXp = p.xpToNextLevel;
+
+            // 3. [BARU] Cek Level Up
+            if (finalXp >= p.xpToNextLevel) {
+               finalXp = finalXp - p.xpToNextLevel; // Sisa XP
+               finalRating += 1; // Rating Naik!
+               finalTargetXp += 200; // Target selanjutnya makin sulit
+            }
+
+            // Simpan
             _currentSquad[i] = p.copyWith(
               seasonAppearances: newApps,
               seasonGoals: newGoals,
               seasonAssists: newAssists,
               averageRating: newAvgRating,
+              // Update RPG Data
+              rating: finalRating,
+              currentXp: finalXp,
+              xpToNextLevel: finalTargetXp,
             );
           }
         }

@@ -44,9 +44,9 @@ class ReorderSquad extends SquadEvent {
 
 // [BARU] Event untuk Update Statistik Pasca-Match
 class UpdatePlayerMatchStats extends SquadEvent {
-  final Map<String, int> goalScorers; // Nama: Jumlah Gol
-  final Map<String, int> assistMakers; // Nama: Jumlah Assist
-  final Map<String, double> matchRatings; // Nama: Rating Match Ini
+  final Map<String, int> goalScorers;   // Key: Nama Pemain, Value: Jumlah Gol
+  final Map<String, int> assistMakers;  // Key: Nama Pemain, Value: Jumlah Assist
+  final Map<String, double> matchRatings; // Key: Nama Pemain, Value: Rating Match Ini
   
   const UpdatePlayerMatchStats({
     required this.goalScorers,

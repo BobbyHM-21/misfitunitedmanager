@@ -7,13 +7,17 @@ class Player extends Equatable {
   final double stamina; // 0.0 - 1.0
   final String? imagePath;
   
-  // [BARU] STATISTIK MUSIM INI
+  // STATISTIK MUSIM
   final int seasonGoals;
   final int seasonAssists;
   final int seasonYellowCards;
   final int seasonRedCards;
   final int seasonAppearances;
-  final double averageRating; // Rata-rata performa
+  final double averageRating;
+
+  // [BARU] RPG PROGRESSION
+  final int currentXp;      // XP yang dimiliki
+  final int xpToNextLevel;  // Target XP untuk naik level (Default 1000)
 
   const Player({
     required this.name,
@@ -27,6 +31,9 @@ class Player extends Equatable {
     this.seasonRedCards = 0,
     this.seasonAppearances = 0,
     this.averageRating = 6.0,
+    // Default XP
+    this.currentXp = 0,
+    this.xpToNextLevel = 1000,
   });
 
   Player copyWith({
@@ -41,6 +48,8 @@ class Player extends Equatable {
     int? seasonRedCards,
     int? seasonAppearances,
     double? averageRating,
+    int? currentXp,
+    int? xpToNextLevel,
   }) {
     return Player(
       name: name ?? this.name,
@@ -54,10 +63,11 @@ class Player extends Equatable {
       seasonRedCards: seasonRedCards ?? this.seasonRedCards,
       seasonAppearances: seasonAppearances ?? this.seasonAppearances,
       averageRating: averageRating ?? this.averageRating,
+      currentXp: currentXp ?? this.currentXp,
+      xpToNextLevel: xpToNextLevel ?? this.xpToNextLevel,
     );
   }
 
-  // Data Dummy Awal
   static List<Player> get dummySquad => [
     const Player(name: "K. NAKAMURA", position: "FWD", rating: 82),
     const Player(name: "J. STEEL", position: "FWD", rating: 78),
@@ -70,12 +80,15 @@ class Player extends Equatable {
     const Player(name: "S. MULLER", position: "DEF", rating: 81),
     const Player(name: "P. DUBOIS", position: "DEF", rating: 76),
     const Player(name: "G. BUFFON", position: "GK", rating: 83),
-    // Cadangan
     const Player(name: "R. CHEN", position: "MID", rating: 72),
     const Player(name: "D. ALVES", position: "DEF", rating: 71),
     const Player(name: "T. SMITH", position: "FWD", rating: 70),
   ];
 
   @override
-  List<Object?> get props => [name, position, rating, stamina, imagePath, seasonGoals, seasonAssists, seasonAppearances, averageRating];
+  List<Object?> get props => [
+    name, position, rating, stamina, imagePath, 
+    seasonGoals, seasonAssists, seasonAppearances, averageRating,
+    currentXp, xpToNextLevel // Jangan lupa daftarkan di props
+  ];
 }

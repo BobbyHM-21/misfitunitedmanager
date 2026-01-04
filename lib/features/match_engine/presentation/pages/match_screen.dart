@@ -1,4 +1,4 @@
-import 'dart:math'; // Tambahan untuk random assist/rating
+import 'dart:math'; // Diperlukan untuk perhitungan rating/assist acak
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,9 +21,10 @@ import '../../../squad_management/data/player_model.dart';
 import '../../../manager_cockpit/logic/manager_bloc.dart';
 import '../../../manager_cockpit/logic/manager_event.dart';
 
-// [BARU] Logic League (Wajib import ini agar liga terupdate)
+// [BARU] Logic League (Untuk Update Klasemen)
 import '../../../league/logic/league_cubit.dart';
 
+// Widget UI
 import '../widgets/hand_deck_widget.dart';
 
 class MatchScreen extends StatelessWidget {
@@ -31,8 +32,7 @@ class MatchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ambil Data Starter dari SquadBloc
-    // (Fitur Lama: Memastikan pemain yang tampil di engine adalah skuad asli)
+    // 1. AMBIL STARTER DARI SQUAD (Fitur Lama: Agar yang main adalah skuad asli)
     final squadState = context.read<SquadBloc>().state;
     List<String> starterNames = [];
     if (squadState is SquadLoaded && squadState.players.isNotEmpty) {
@@ -49,10 +49,10 @@ class MatchScreen extends StatelessWidget {
           // --- LOGIKA SAAT MATCH BERAKHIR ---
           if (state.isMatchOver) {
             
-            // 1. [Fitur Lama] Kurangi Stamina Pemain Starter
+            // A. [Fitur Lama] Kurangi Stamina Starter
             context.read<SquadBloc>().add(ReduceStaminaForStarters());
             
-            // 2. [Fitur Lama] Hitung Hadiah Uang (Ekonomi)
+            // B. [Fitur Lama] Hitung Uang
             int reward = 0;
             String resultStatus = "";
 
@@ -67,46 +67,43 @@ class MatchScreen extends StatelessWidget {
               resultStatus = "LOSS";
             }
 
-            // Bonus Gol ($50 per gol)
             int goalBonus = state.playerScore * 50;
             int totalEarnings = reward + goalBonus;
 
-            // 3. [Fitur Lama] Update Uang Manager
+            // C. [Fitur Lama] Update Uang Manager
             context.read<ManagerBloc>().add(ModifyMoney(totalEarnings));
 
             // ============================================================
-            // [FITUR BARU PHASE 4: UPDATE STATISTIK & LIGA]
+            // [FITUR BARU PHASE 4: UPDATE STATISTIK & KLASEMEN]
             // ============================================================
             
-            // A. Kumpulkan Data Pencetak Gol Tim Kita
+            // 1. Ambil nama pencetak gol tim kita
             List<String> myScorersList = state.matchGoals
                 .where((g) => !g.isEnemyGoal)
                 .map((g) => g.scorerName)
                 .toList();
 
-            // B. Update Klasemen Liga (LeagueCubit)
-            // Ini akan mensimulasikan match tim lain dan update poin tim kita
+            // 2. Update Klasemen Liga (LeagueCubit)
+            // (Pastikan Anda sudah update main.dart agar LeagueCubit tersedia)
             context.read<LeagueCubit>().finishMatchday(
               state.playerScore, 
               state.enemyScore, 
               myScorersList
             );
 
-            // C. Hitung Statistik Detail untuk Pemain (SquadBloc)
+            // 3. Hitung Statistik Detail (Gol, Assist, Rating) untuk Skuad
             Map<String, int> goalMap = {};
             Map<String, int> assistMap = {};
             Map<String, double> ratingMap = {};
             final random = Random();
 
-            // C.1 Hitung Gol per individu
+            // 3a. Hitung Gol
             for (var scorer in myScorersList) {
               goalMap[scorer] = (goalMap[scorer] ?? 0) + 1;
               
-              // C.2 Simulasi Assist (Karena engine belum track assist real)
-              // Pilih acak 1 starter lain sebagai pemberi assist
+              // 3b. Simulasi Assist (Pilih starter lain secara acak selain pencetak gol)
               if (starterNames.length > 1) {
                 String assister = starterNames[random.nextInt(starterNames.length)];
-                // Usahakan assist bukan dari pencetak gol itu sendiri
                 int attempts = 0;
                 while (assister == scorer && attempts < 5) {
                   assister = starterNames[random.nextInt(starterNames.length)];
@@ -116,38 +113,35 @@ class MatchScreen extends StatelessWidget {
               }
             }
 
-            // C.3 Hitung Rating Match (6.0 - 9.0)
+            // 3c. Hitung Rating Match (6.0 - 10.0)
             for (var player in starterNames) {
               double baseRating = 6.0;
-              // Tambah rating signifikan jika cetak gol/assist
+              // Tambah rating jika cetak gol/assist
               if (goalMap.containsKey(player)) baseRating += (goalMap[player]! * 1.0);
               if (assistMap.containsKey(player)) baseRating += (assistMap[player]! * 0.5);
               
-              // Variasi Random +/- 0.5 agar tidak monoton
+              // Variasi Random +/- 0.5
               double variance = (random.nextDouble() - 0.5); 
               
-              // Bonus rating jika Menang/Seri
+              // Bonus jika Menang
               if (state.playerScore > state.enemyScore) baseRating += 0.5;
               
               double finalRating = baseRating + variance;
-              // Clamp rating antara 3.0 sampai 10.0
               if (finalRating > 10.0) finalRating = 10.0;
               if (finalRating < 3.0) finalRating = 3.0;
 
               ratingMap[player] = double.parse(finalRating.toStringAsFixed(1));
             }
 
-            // D. Kirim Semua Statistik ke SquadBloc
-            // Event ini akan menambah: SeasonGoals, SeasonAssists, Apps, & AvgRating
+            // 4. Kirim Statistik ke SquadBloc (agar tersimpan di profil pemain)
             context.read<SquadBloc>().add(UpdatePlayerMatchStats(
               goalScorers: goalMap,
               assistMakers: assistMap,
               matchRatings: ratingMap,
             ));
-
             // ============================================================
 
-            // 4. [Fitur Lama] Tampilkan Popup Hasil Pertandingan
+            // D. [Fitur Lama] Tampilkan Dialog Hasil
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -156,31 +150,30 @@ class MatchScreen extends StatelessWidget {
           }
         },
         child: Scaffold(
+          // [Fitur Lama] Stack berisi Game Engine & UI Overlay
           body: Stack(
             children: [
-              // LAYER 1: GAME ENGINE (FLAME)
-              // Background lapangan dan visual pemain
+              // LAYER 1: GAME FLAME (VISUAL)
               ColorFiltered(
                 colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.4), BlendMode.darken),
                 child: GameWidget(game: ThePitchGame(playerNames: starterNames)),
               ),
               
-              // LAYER 2: UI UTAMA (Overlay)
+              // LAYER 2: UI UTAMA
               SafeArea(
                 child: Column(
                   children: [
-                    // A. SCOREBOARD (Atas)
+                    // A. SCOREBOARD
                     _buildScoreBoard(context),
                     
                     const Spacer(),
 
-                    // B. KOMENTATOR / EVENT BOX (Tengah Bawah)
+                    // B. EVENT BOX / KOMENTATOR
                     BlocBuilder<MatchBloc, MatchState>(
                       builder: (context, state) {
                         Color borderColor = Colors.white12;
                         String titleText = "";
                         
-                        // Logika Warna Border berdasarkan Situasi
                         if (state.isEventTriggered) {
                            if (state.matchContext == MatchContext.attacking) {
                              borderColor = AppColors.electricCyan;
@@ -214,7 +207,7 @@ class MatchScreen extends StatelessWidget {
                                 ),
                               const SizedBox(height: 10),
                               Text(
-                                state.lastEvent, // Teks Komentar
+                                state.lastEvent,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                   color: Colors.white,
@@ -228,10 +221,9 @@ class MatchScreen extends StatelessWidget {
                       },
                     ),
 
-                    // C. KARTU TANGAN (Bawah - Interaksi User)
+                    // C. KARTU TANGAN (HAND DECK)
                     BlocBuilder<MatchBloc, MatchState>(
                       builder: (context, state) {
-                        // Jika tidak ada event, tampilkan "Simulating..."
                         if (!state.isEventTriggered) {
                           return const Padding(
                             padding: EdgeInsets.only(bottom: 20.0),
@@ -239,7 +231,6 @@ class MatchScreen extends StatelessWidget {
                           );
                         }
                         
-                        // Jika ada event, tampilkan pilihan kartu
                         return Column(
                           children: [
                             Text(
@@ -249,7 +240,7 @@ class MatchScreen extends StatelessWidget {
                               style: const TextStyle(color: AppColors.neonYellow, fontWeight: FontWeight.bold)
                             ),
                             const SizedBox(height: 10),
-                            const HandDeckWidget(), // Widget Kartu
+                            const HandDeckWidget(),
                             const SizedBox(height: 20),
                           ],
                         );
@@ -274,7 +265,8 @@ class MatchScreen extends StatelessWidget {
     );
   }
 
-  // WIDGET SCOREBOARD
+  // --- WIDGET HELPER (TETAP SAMA) ---
+
   Widget _buildScoreBoard(BuildContext context) {
     return BlocBuilder<MatchBloc, MatchState>(
       builder: (context, state) {
@@ -310,7 +302,6 @@ class MatchScreen extends StatelessWidget {
     );
   }
 
-  // WIDGET DIALOG HASIL MATCH
   Widget _buildMatchResultDialog(BuildContext context, MatchState state, int earnings, String status) {
      return AlertDialog(
       backgroundColor: Colors.black.withValues(alpha: 0.95),
@@ -337,7 +328,7 @@ class MatchScreen extends StatelessWidget {
              ),
              const SizedBox(height: 20),
              
-             // Info Pendapatan Uang
+             // Info Gaji
              Container(
                padding: const EdgeInsets.all(12),
                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
@@ -392,7 +383,7 @@ class MatchScreen extends StatelessWidget {
             ),
             onPressed: () { 
               Navigator.pop(context); // Tutup Dialog
-              Navigator.pop(context); // Kembali ke Menu Utama
+              Navigator.pop(context); // Kembali ke Menu
             }, 
             child: const Text("COLLECT & RETURN", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
           )
