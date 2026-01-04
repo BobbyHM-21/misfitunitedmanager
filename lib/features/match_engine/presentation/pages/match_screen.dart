@@ -4,20 +4,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../game/the_pitch_game.dart'; 
 import '../../../../core/theme/app_colors.dart';
 
-// Import Logic Match
+// Logic Match
 import '../../logic/match_bloc.dart';
 import '../../logic/match_event.dart';
 import '../../logic/match_state.dart';
 
-// Import Logic Squad
+// Logic Squad
 import '../../../squad_management/logic/squad_bloc.dart';
 import '../../../squad_management/logic/squad_event.dart';
 import '../../../squad_management/logic/squad_state.dart';
 import '../../../squad_management/data/player_model.dart';
 
-// Import Logic Manager (UNTUK DUIT)
+// Logic Manager
 import '../../../manager_cockpit/logic/manager_bloc.dart';
 import '../../../manager_cockpit/logic/manager_event.dart';
+
+// [BARU] Logic League
+import '../../../league/logic/league_cubit.dart';
 
 import '../widgets/hand_deck_widget.dart';
 
@@ -64,11 +67,14 @@ class MatchScreen extends StatelessWidget {
             int goalBonus = state.playerScore * 50;
             int totalEarnings = reward + goalBonus;
 
-            // 3. KIRIM KE MANAGER BLOC (TAMBAH KE DOMPET)
-            // Menggunakan event ModifyMoney yang sudah ada di event manager Anda
+            // 3. Update Uang Manager
             context.read<ManagerBloc>().add(ModifyMoney(totalEarnings));
 
-            // 4. TAMPILKAN POPUP
+            // [BARU] 4. UPDATE KLASEMEN LIGA
+            // Ini baris penting agar poin di tabel berubah
+            context.read<LeagueCubit>().updateLeagueAfterMatch(state.playerScore, state.enemyScore);
+
+            // 5. Tampilkan Popup
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -81,7 +87,7 @@ class MatchScreen extends StatelessWidget {
             children: [
               // LAYER 1: GAME FLAME (Background Statis)
               ColorFiltered(
-                colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.4), BlendMode.darken),
+                colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.4), BlendMode.darken),
                 child: GameWidget(game: ThePitchGame(playerNames: starterNames)),
               ),
               
@@ -115,11 +121,11 @@ class MatchScreen extends StatelessWidget {
                           margin: const EdgeInsets.all(16),
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.9),
+                            color: Colors.black.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: borderColor, width: state.isEventTriggered ? 3 : 1),
                             boxShadow: [
-                              BoxShadow(color: borderColor.withOpacity(0.5), blurRadius: 20)
+                              BoxShadow(color: borderColor.withValues(alpha: 0.5), blurRadius: 20)
                             ]
                           ),
                           child: Column(
@@ -148,7 +154,7 @@ class MatchScreen extends StatelessWidget {
                       },
                     ),
 
-                    // C. KARTU TANGAN (HANYA MUNCUL SAAT EVENT PAUSE)
+                    // C. KARTU TANGAN
                     BlocBuilder<MatchBloc, MatchState>(
                       builder: (context, state) {
                         if (!state.isEventTriggered) {
@@ -199,7 +205,7 @@ class MatchScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.9),
+            color: Colors.black.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.electricCyan),
           ),
@@ -227,10 +233,9 @@ class MatchScreen extends StatelessWidget {
     );
   }
 
-  // --- POPUP REWARD (DUIT) ---
   Widget _buildMatchResultDialog(BuildContext context, MatchState state, int earnings, String status) {
      return AlertDialog(
-      backgroundColor: Colors.black.withOpacity(0.95),
+      backgroundColor: Colors.black.withValues(alpha: 0.95),
       shape: RoundedRectangleBorder(side: const BorderSide(color: AppColors.electricCyan), borderRadius: BorderRadius.circular(12)),
       
       title: Center(
@@ -308,8 +313,8 @@ class MatchScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15)
             ),
             onPressed: () { 
-              Navigator.pop(context); // Tutup Dialog
-              Navigator.pop(context); // Keluar dari Match Screen
+              Navigator.pop(context); 
+              Navigator.pop(context); 
             }, 
             child: const Text("COLLECT & RETURN", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))
           )

@@ -8,11 +8,13 @@ import '../widgets/neon_menu_button.dart';
 import '../../logic/manager_bloc.dart';
 import '../../logic/manager_state.dart';
 
-// Import Halaman Lain (Pastikan path import ini sesuai folder Anda)
+// Import Halaman Lain
 import '../../../../features/squad_management/presentation/pages/squad_screen.dart';
 import '../../../../features/squad_management/presentation/pages/tactics_screen.dart';
 import '../../../transfer_market/presentation/pages/transfer_screen.dart';
 import '../../../match_engine/presentation/pages/match_screen.dart';
+// [BARU] Import League
+import '../../../league/presentation/pages/league_screen.dart';
 
 class CockpitScreen extends StatelessWidget {
   const CockpitScreen({super.key});
@@ -20,16 +22,16 @@ class CockpitScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- BACKGROUND IMAGE FULL SCREEN ---
+      // BACKGROUND IMAGE FULL SCREEN (Fitur Lama Anda)
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(AppAssets.bgCity), // Panggil Background Kota
+            image: AssetImage(AppAssets.bgCity), 
             fit: BoxFit.cover, 
             colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.7), 
+              Colors.black.withValues(alpha: 0.7), 
               BlendMode.darken,
             ),
           ),
@@ -40,11 +42,11 @@ class CockpitScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(), // HEADER (Saldo, Nama, dll)
+                _buildHeader(), 
                 
                 const SizedBox(height: 20),
                 
-                // TOMBOL BIG MATCH
+                // TOMBOL BIG MATCH (Fitur Lama Anda)
                 SizedBox(
                   width: double.infinity,
                   height: 60,
@@ -120,13 +122,18 @@ class CockpitScreen extends StatelessWidget {
                           );
                         },
                       ),
-                      // TOMBOL 4: KLUB
+                      // [BARU] TOMBOL 4: LEAGUE (Ganti dari KLUB)
                       NeonMenuButton(
-                        label: "KLUB",
-                        imagePath: AppAssets.iconClub,
-                        glowColor: Colors.white,
+                        label: "LEAGUE",
+                        imagePath: AppAssets.iconClub, 
+                        glowColor: Colors.purpleAccent,
                         delay: 400,
-                        onTap: () => print("Klub Clicked"),
+                        onTap: () {
+                           Navigator.push(
+                            context, 
+                            MaterialPageRoute(builder: (_) => const LeagueScreen())
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -140,27 +147,23 @@ class CockpitScreen extends StatelessWidget {
   }
 
   Widget _buildHeader() {
-    // GUNAKAN BLOC BUILDER (Cek Status ManagerLoaded)
     return BlocBuilder<ManagerBloc, ManagerState>(
       builder: (context, state) {
-        // Default values
         String name = "LOADING...";
         String club = "...";
         int money = 0;
         String avatar = AppAssets.avatarManager;
 
-        // JIKA DATA SUDAH LOADED (Sesuai struktur Anda)
         if (state is ManagerLoaded) {
           name = state.name;
           club = state.clubName;
           money = state.money;
-          // avatar = state.avatarPath; // Jika mau custom
         }
 
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.black.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(12),
             border: Border(
               left: BorderSide(color: AppColors.electricCyan, width: 4),
@@ -168,7 +171,6 @@ class CockpitScreen extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Avatar
               CircleAvatar(
                 backgroundColor: AppColors.electricCyan,
                 radius: 25,
@@ -176,7 +178,6 @@ class CockpitScreen extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               
-              // Info Text
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,7 +199,6 @@ class CockpitScreen extends StatelessWidget {
                           style: const TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                         const Spacer(),
-                        // TAMPILAN UANG ($)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
