@@ -22,6 +22,10 @@ dependencies:
   flutter_animate: ^4.5.0 # Efek animasi UI (Glow/Slide)
   gap: ^3.0.0           # Pengganti SizedBox yang lebih rapi
 
+  shared_preferences: ^2.2.2 # Menyimpan data lokal (skor, pengaturan)
+  percent_indicator: ^4.2.2 # Indikator persentase (stamina, energi)
+  cupertino_icons: ^1.0.2 # Ikon iOS standar
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

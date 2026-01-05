@@ -10,6 +10,7 @@ abstract class ManagerState extends Equatable {
 
 // Kondisi Awal (Loading)
 class ManagerInitial extends ManagerState {}
+class ManagerLoading extends ManagerState {}
 
 // Kondisi Utama (Data Siap Tampil)
 class ManagerLoaded extends ManagerState {
@@ -18,6 +19,7 @@ class ManagerLoaded extends ManagerState {
   final int money; // Mata uang Misfits ($)
   final int division;
   final String avatarPath;
+  
 
   const ManagerLoaded({
     required this.name,

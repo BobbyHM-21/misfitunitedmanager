@@ -28,3 +28,21 @@ class ModifyMoney extends ManagerEvent {
   @override
   List<Object> get props => [amount];
 }
+
+abstract class ManagerState extends Equatable {
+  const ManagerState();
+  @override
+  List<Object> get props => [];
+}
+
+class ManagerInitial extends ManagerState {}
+
+// [BARU] State saat sedang membaca memori HP
+class ManagerLoading extends ManagerState {}
+
+class ManagerLoaded extends ManagerState {
+  final int money;
+  const ManagerLoaded(this.money);
+  @override
+  List<Object> get props => [money];
+}

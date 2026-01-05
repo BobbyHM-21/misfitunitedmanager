@@ -1,42 +1,61 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/constants/app_assets.dart';
+import '../../../core/services/save_service.dart';
 import 'manager_event.dart';
 import 'manager_state.dart';
 
 class ManagerBloc extends Bloc<ManagerEvent, ManagerState> {
+  // Default Data
+  int _currentMoney = 500;
+  String _managerName = "Manager";
+  String _clubName = "Misfit United";
+  String _division = "Division 3";
+  String _avatarPath = "assets/images/avatar_manager.png";
+
   ManagerBloc() : super(ManagerInitial()) {
     
-    // 1. Saat Aplikasi Mulai -> Load Data Dummy Awal
-    on<LoadManagerProfile>((event, emit) async {
-      // Simulasi delay loading
-      await Future.delayed(const Duration(milliseconds: 500));
+    // 1. LOGIC LOAD DATA
+    on<LoadManagerData>((event, emit) async {
+      emit(ManagerLoading()); 
       
-      emit(const ManagerLoaded(
-        name: "NEON BOSS",
-        clubName: "MISFIT UNITED",
-        money: 50000, // Modal Awal
-        division: 5,
-        avatarPath: AppAssets.avatarManager,
+      // Load Money
+      final savedMoney = await SaveService.loadMoney();
+      if (savedMoney != null) {
+        _currentMoney = savedMoney;
+      } else {
+        _currentMoney = 500;
+      }
+      
+      // Emit State with ALL required fields
+      emit(ManagerLoaded(
+        money: _currentMoney,
+        name: _managerName,
+        clubName: _clubName,
+        division: _division,
+        avatarPath: _avatarPath,
       ));
     });
 
-    // 2. Saat Ganti Nama
-    on<UpdateManagerName>((event, emit) {
-      if (state is ManagerLoaded) {
-        final currentState = state as ManagerLoaded;
-        emit(currentState.copyWith(name: event.newName));
-      }
-    });
-
-    // 3. Saat Uang Berubah (Gaji Match / Beli Pemain)
+    // 2. LOGIC UBAH UANG
     on<ModifyMoney>((event, emit) {
       if (state is ManagerLoaded) {
-        final currentState = state as ManagerLoaded;
-        final newMoney = currentState.money + event.amount;
-        
-        // Update state dengan uang baru
-        emit(currentState.copyWith(money: newMoney));
+        // Update money based on previous state
+        _currentMoney = (state as ManagerLoaded).money + event.amount;
+      } else {
+        // Fallback if state wasn't loaded
+        _currentMoney += event.amount;
       }
+
+      // Save to storage
+      SaveService.saveMoney(_currentMoney);
+      
+      // Emit State with ALL required fields
+      emit(ManagerLoaded(
+        money: _currentMoney,
+        name: _managerName,
+        clubName: _clubName,
+        division: _division,
+        avatarPath: _avatarPath,
+      ));
     });
   }
 }

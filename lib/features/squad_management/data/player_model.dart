@@ -2,9 +2,9 @@ import 'package:equatable/equatable.dart';
 
 class Player extends Equatable {
   final String name;
-  final String position; // FWD, MID, DEF, GK
+  final String position; 
   final int rating;
-  final double stamina; // 0.0 - 1.0
+  final double stamina; 
   final String? imagePath;
   
   // STATISTIK MUSIM
@@ -15,9 +15,9 @@ class Player extends Equatable {
   final int seasonAppearances;
   final double averageRating;
 
-  // [BARU] RPG PROGRESSION (XP)
-  final int currentXp;      // XP saat ini
-  final int xpToNextLevel;  // Target XP (Default 1000)
+  // RPG PROGRESSION
+  final int currentXp;      
+  final int xpToNextLevel;  
 
   const Player({
     required this.name,
@@ -31,10 +31,47 @@ class Player extends Equatable {
     this.seasonRedCards = 0,
     this.seasonAppearances = 0,
     this.averageRating = 6.0,
-    // Default XP
     this.currentXp = 0,
     this.xpToNextLevel = 1000,
   });
+
+  // [BARU] CONVERT DATA KE JSON (UNTUK DISIMPAN)
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'position': position,
+      'rating': rating,
+      'stamina': stamina,
+      'imagePath': imagePath,
+      'seasonGoals': seasonGoals,
+      'seasonAssists': seasonAssists,
+      'seasonYellowCards': seasonYellowCards,
+      'seasonRedCards': seasonRedCards,
+      'seasonAppearances': seasonAppearances,
+      'averageRating': averageRating,
+      'currentXp': currentXp,
+      'xpToNextLevel': xpToNextLevel,
+    };
+  }
+
+  // [BARU] MEMBUAT PLAYER DARI JSON (SAAT DILOAD)
+  factory Player.fromJson(Map<String, dynamic> json) {
+    return Player(
+      name: json['name'],
+      position: json['position'],
+      rating: json['rating'],
+      stamina: (json['stamina'] as num).toDouble(),
+      imagePath: json['imagePath'],
+      seasonGoals: json['seasonGoals'] ?? 0,
+      seasonAssists: json['seasonAssists'] ?? 0,
+      seasonYellowCards: json['seasonYellowCards'] ?? 0,
+      seasonRedCards: json['seasonRedCards'] ?? 0,
+      seasonAppearances: json['seasonAppearances'] ?? 0,
+      averageRating: (json['averageRating'] as num).toDouble(),
+      currentXp: json['currentXp'] ?? 0,
+      xpToNextLevel: json['xpToNextLevel'] ?? 1000,
+    );
+  }
 
   Player copyWith({
     String? name,
@@ -68,7 +105,6 @@ class Player extends Equatable {
     );
   }
 
-  // Data Dummy
   static List<Player> get dummySquad => [
     const Player(name: "K. NAKAMURA", position: "FWD", rating: 82),
     const Player(name: "J. STEEL", position: "FWD", rating: 78),
@@ -90,6 +126,6 @@ class Player extends Equatable {
   List<Object?> get props => [
     name, position, rating, stamina, imagePath, 
     seasonGoals, seasonAssists, seasonAppearances, averageRating,
-    currentXp, xpToNextLevel // [PENTING] Daftarkan props XP
+    currentXp, xpToNextLevel 
   ];
 }
