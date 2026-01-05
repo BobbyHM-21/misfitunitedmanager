@@ -6,7 +6,7 @@ class TeamModel {
   final int drawn;
   final int lost;
   final int points;
-  final bool isPlayerTeam; // Penanda tim kita
+  final bool isPlayerTeam;
 
   TeamModel({
     required this.name,
@@ -35,6 +35,30 @@ class TeamModel {
       lost: lost ?? this.lost,
       points: points ?? this.points,
       isPlayerTeam: isPlayerTeam ?? this.isPlayerTeam,
+    );
+  }
+
+  // [BARU] toJson
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'played': played,
+    'won': won,
+    'drawn': drawn,
+    'lost': lost,
+    'points': points,
+    'isPlayerTeam': isPlayerTeam,
+  };
+
+  // [BARU] fromJson
+  factory TeamModel.fromJson(Map<String, dynamic> json) {
+    return TeamModel(
+      name: json['name'],
+      played: json['played'],
+      won: json['won'],
+      drawn: json['drawn'],
+      lost: json['lost'],
+      points: json['points'],
+      isPlayerTeam: json['isPlayerTeam'] ?? false,
     );
   }
 }
@@ -74,13 +98,51 @@ class FixtureModel {
       matchday: matchday ?? this.matchday,
     );
   }
+
+  // [BARU] toJson
+  Map<String, dynamic> toJson() => {
+    'homeTeam': homeTeam,
+    'awayTeam': awayTeam,
+    'homeScore': homeScore,
+    'awayScore': awayScore,
+    'isPlayed': isPlayed,
+    'matchday': matchday,
+  };
+
+  // [BARU] fromJson
+  factory FixtureModel.fromJson(Map<String, dynamic> json) {
+    return FixtureModel(
+      homeTeam: json['homeTeam'],
+      awayTeam: json['awayTeam'],
+      homeScore: json['homeScore'],
+      awayScore: json['awayScore'],
+      isPlayed: json['isPlayed'],
+      matchday: json['matchday'],
+    );
+  }
 }
 
 // Model untuk Top Skor / Assist
 class PlayerStatEntry {
   final String name;
   final String teamName;
-  final int value; // Jumlah Gol atau Assist
+  final int value;
   
   PlayerStatEntry(this.name, this.teamName, this.value);
+
+  // [BARU] toJson
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'teamName': teamName,
+    'value': value,
+  };
+
+  // [BARU] fromJson
+  factory PlayerStatEntry.fromJson(Map<String, dynamic> json) {
+    return PlayerStatEntry(
+      json['name'],
+      json['teamName'],
+      json['value'],
+    );
+  }
 }

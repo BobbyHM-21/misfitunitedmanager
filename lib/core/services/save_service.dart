@@ -5,52 +5,46 @@ import '../../features/squad_management/data/player_model.dart';
 class SaveService {
   static const String KEY_MONEY = 'manager_money';
   static const String KEY_SQUAD = 'my_squad_list';
+  // [BARU] Key untuk Data Liga (Jadwal, Klasemen, Top Skor)
+  static const String KEY_LEAGUE_DATA = 'league_data_full_v1';
 
-  // --- LOGIC UANG ---
+  // ... (Method saveMoney dan saveSquad yang lama TETAP DISINI, jangan dihapus) ...
   
-  // Simpan Uang
   static Future<void> saveMoney(int amount) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(KEY_MONEY, amount);
   }
 
-  // Load Uang
   static Future<int?> loadMoney() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(KEY_MONEY);
   }
 
-  // --- LOGIC SKUAD (Pemain, XP, Stats) ---
-
-  // Simpan Skuad
   static Future<void> saveSquad(List<Player> players) async {
     final prefs = await SharedPreferences.getInstance();
-    // 1. Convert List<Player> jadi List<Map> (JSON)
     List<Map<String, dynamic>> jsonList = players.map((p) => p.toJson()).toList();
-    // 2. Encode jadi String panjang
-    String encodedData = json.encode(jsonList);
-    // 3. Simpan ke HP
-    await prefs.setString(KEY_SQUAD, encodedData);
+    await prefs.setString(KEY_SQUAD, json.encode(jsonList));
   }
 
-  // Load Skuad
   static Future<List<Player>?> loadSquad() async {
     final prefs = await SharedPreferences.getInstance();
     String? encodedData = prefs.getString(KEY_SQUAD);
-
-    if (encodedData == null) return null; // Belum ada save data
-
-    // 1. Decode String jadi List
+    if (encodedData == null) return null;
     List<dynamic> decodedList = json.decode(encodedData);
-    // 2. Convert balik jadi List<Player>
-    List<Player> loadedPlayers = decodedList.map((json) => Player.fromJson(json)).toList();
-    
-    return loadedPlayers;
+    return decodedList.map((json) => Player.fromJson(json)).toList();
   }
-  
-  // Reset Data (Untuk Debugging/New Game)
-  static Future<void> clearAllData() async {
+
+  // --- [FITUR BARU] SAVE LEAGUE ---
+  // Menyimpan seluruh state liga dalam satu paket JSON agar konsisten
+  static Future<void> saveLeague(Map<String, dynamic> leagueData) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.setString(KEY_LEAGUE_DATA, json.encode(leagueData));
+  }
+
+  static Future<Map<String, dynamic>?> loadLeague() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? data = prefs.getString(KEY_LEAGUE_DATA);
+    if (data == null) return null;
+    return json.decode(data);
   }
 }

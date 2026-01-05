@@ -7,3 +7,7 @@ market transfer, sell now harga murah, nego
 formasi ,taktik
 tim ovr
 card sistem lebih kompleks
+avatar pemain ,statistis ovr/power pemain 
+nama pemain bebas diganti
+database tim / player
+customize nama manager/tim / logo 
