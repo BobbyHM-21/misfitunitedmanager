@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../game/the_pitch_game.dart'; 
 import '../../../../core/theme/app_colors.dart';
-import '../../data/goal_model.dart'; 
 
 // Logic Match
 import '../../logic/match_bloc.dart';

@@ -9,9 +9,7 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
   SquadBloc() : super(SquadInitial()) {
     _currentSquad = List.from(Player.dummySquad);
     
-    // ... (Event lain seperti LoadSquad, AddPlayer, Reorder tetap sama, tidak perlu dihapus) ...
-    // LANGSUNG SAJA TIMPA BAGIAN INI:
-
+    // --- Event Standar (Tetap Sama) ---
     on<LoadSquad>((event, emit) {
       emit(SquadLoaded(List.from(_currentSquad)));
     });
@@ -72,16 +70,16 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
       }
     });
 
-    // [BAGIAN PENTING: LOGIC UPDATE STATISTIK & XP]
+    // --- [LOGIC BARU] UPDATE STATISTIK & XP ---
     on<UpdatePlayerMatchStats>((event, emit) {
       if (state is SquadLoaded) {
         for (int i = 0; i < _currentSquad.length; i++) {
-          // Hanya starter (index 0-10) yang dapat update
+          // Hanya Starter (11 pemain pertama) yang dapat XP
           if (i < 11) {
             Player p = _currentSquad[i];
             String name = p.name;
 
-            // 1. Update Statistik
+            // 1. Update Statistik Dasar
             int newApps = p.seasonAppearances + 1;
             int goalsToAdd = event.goalScorers[name] ?? 0;
             int newGoals = p.seasonGoals + goalsToAdd;
@@ -93,7 +91,7 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
             if (p.seasonAppearances == 0) totalRatingScore = matchRating;
             double newAvgRating = double.parse((totalRatingScore / newApps).toStringAsFixed(1));
 
-            // 2. [BARU] Hitung XP
+            // 2. [BARU] Hitung XP & Level Up
             // Rumus: (Rating x 20) + (Gol x 100) + (Assist x 50)
             int gainedXp = (matchRating * 20).toInt(); 
             gainedXp += (goalsToAdd * 100);
@@ -103,20 +101,20 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
             int finalRating = p.rating;
             int finalTargetXp = p.xpToNextLevel;
 
-            // 3. [BARU] Cek Level Up
+            // Cek jika XP cukup untuk naik level
             if (finalXp >= p.xpToNextLevel) {
-               finalXp = finalXp - p.xpToNextLevel; // Sisa XP
+               finalXp = finalXp - p.xpToNextLevel; // Reset sisa XP
                finalRating += 1; // Rating Naik!
-               finalTargetXp += 200; // Target selanjutnya makin sulit
+               finalTargetXp += 200; // Target level selanjutnya makin susah
             }
 
-            // Simpan
+            // Simpan Update
             _currentSquad[i] = p.copyWith(
               seasonAppearances: newApps,
               seasonGoals: newGoals,
               seasonAssists: newAssists,
               averageRating: newAvgRating,
-              // Update RPG Data
+              // Data RPG
               rating: finalRating,
               currentXp: finalXp,
               xpToNextLevel: finalTargetXp,

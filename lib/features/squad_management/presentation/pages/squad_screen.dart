@@ -14,14 +14,64 @@ import '../../../manager_cockpit/logic/manager_bloc.dart';
 import '../../../manager_cockpit/logic/manager_event.dart';
 import '../../../manager_cockpit/logic/manager_state.dart';
 
-class SquadScreen extends StatelessWidget {
+class SquadScreen extends StatefulWidget {
   const SquadScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Trigger Load saat dibuka
-    context.read<SquadBloc>().add(LoadSquad());
+  State<SquadScreen> createState() => _SquadScreenState();
+}
 
+class _SquadScreenState extends State<SquadScreen> {
+  // Variable untuk fitur Tap Selection
+  int? _selectedPlayerIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load data squad saat screen dibuka
+    context.read<SquadBloc>().add(LoadSquad());
+  }
+
+  // --- LOGIKA TAP TO MOVE (DIPERBAIKI) ---
+  void _handlePlayerTap(int index) {
+    setState(() {
+      if (_selectedPlayerIndex == null) {
+        // Klik pertama: Pilih pemain
+        _selectedPlayerIndex = index;
+      } else if (_selectedPlayerIndex == index) {
+        // Klik pemain yang sama: Batalkan pilihan
+        _selectedPlayerIndex = null;
+      } else {
+        // Klik kedua: PINDAHKAN (Move) pemain
+        int oldIndex = _selectedPlayerIndex!;
+        int newIndex = index;
+
+        // [FIX PENTING] Koreksi Indeks untuk ReorderableListView
+        // Jika memindahkan item ke BAWAH (index lebih besar), kita harus tambah +1
+        // karena saat item diambil, index di bawahnya akan bergeser naik.
+        if (oldIndex < newIndex) {
+          newIndex += 1;
+        }
+
+        // Eksekusi Pindah
+        context.read<SquadBloc>().add(ReorderSquad(oldIndex, newIndex));
+        _selectedPlayerIndex = null; // Reset seleksi
+        
+        // Feedback UI (Hapus const agar tidak error)
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Player Moved!"), 
+            duration: Duration(milliseconds: 300),
+            backgroundColor: AppColors.electricCyan,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -29,7 +79,7 @@ class SquadScreen extends StatelessWidget {
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // [FITUR LAMA] TOMBOL HEAL ALL TEAM
+          // TOMBOL HEAL ALL
           IconButton(
             icon: const Icon(Icons.local_hospital, color: Colors.greenAccent),
             tooltip: "Heal All Players",
@@ -37,7 +87,7 @@ class SquadScreen extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           
-          // [FITUR LAMA] MONEY DISPLAY
+          // DISPLAY UANG
           BlocBuilder<ManagerBloc, ManagerState>(
             builder: (context, state) {
               int money = 0;
@@ -61,19 +111,25 @@ class SquadScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // [FITUR LAMA] INSTRUKSI
+          // INSTRUKSI (Berubah warna jika sedang memilih)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            color: Colors.white10,
-            child: const Text(
-              "DRAG & DROP players to arrange Starting XI.\nPositions 1-11 are Starters.",
+            color: _selectedPlayerIndex != null ? AppColors.electricCyan.withValues(alpha: 0.1) : Colors.white10,
+            child: Text(
+              _selectedPlayerIndex == null 
+                  ? "DRAG & DROP or TAP to Select Player.\nPositions 1-11 are Starters."
+                  : "TAP target position to MOVE selected player.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(
+                color: _selectedPlayerIndex == null ? Colors.grey : AppColors.neonYellow, 
+                fontSize: 12,
+                fontWeight: _selectedPlayerIndex == null ? FontWeight.normal : FontWeight.bold
+              ),
             ),
           ),
           
-          // [FITUR LAMA] DRAG & DROP LIST
+          // LIST PEMAIN
           Expanded(
             child: BlocBuilder<SquadBloc, SquadState>(
               builder: (context, state) {
@@ -81,15 +137,19 @@ class SquadScreen extends StatelessWidget {
                   return ReorderableListView.builder(
                     padding: const EdgeInsets.only(bottom: 50),
                     itemCount: state.players.length,
+                    
+                    // Handler Drag & Drop (Fitur Lama)
                     onReorder: (oldIndex, newIndex) {
                       context.read<SquadBloc>().add(ReorderSquad(oldIndex, newIndex));
                     },
+                    
                     itemBuilder: (context, index) {
                       final player = state.players[index];
-                      final isStarter = index < 11; // 11 Teratas adalah Starter
+                      final isStarter = index < 11;
+                      final isSelected = _selectedPlayerIndex == index;
                       
-                      // WIDGET ITEM (Key wajib ada untuk reorder)
-                      return _buildDraggablePlayerItem(context, player, isStarter, index + 1, ValueKey(player.name));
+                      // PANGGIL WIDGET ITEM (INLINE AGAR KODE LENGKAP)
+                      return _buildPlayerListItem(context, player, isStarter, index, isSelected);
                     },
                   );
                 }
@@ -102,117 +162,224 @@ class SquadScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDraggablePlayerItem(BuildContext context, Player player, bool isStarter, int number, Key key) {
+  // --- WIDGET ITEM PEMAIN (DIGABUNG DISINI) ---
+  Widget _buildPlayerListItem(BuildContext context, Player player, bool isStarter, int index, bool isSelected) {
     Color statusColor = isStarter ? AppColors.electricCyan : Colors.grey;
     double stamina = player.stamina;
+    double targetXp = (player.xpToNextLevel > 0) ? player.xpToNextLevel.toDouble() : 1000.0;
+    double xpProgress = (player.currentXp / targetXp).clamp(0.0, 1.0);
 
-    return Container(
-      key: key, // Penting untuk ReorderableListView
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      decoration: BoxDecoration(
-        color: isStarter ? Colors.blueGrey.withValues(alpha: 0.1) : Colors.black,
-        border: Border(
-          left: BorderSide(color: statusColor, width: 4),
-          bottom: const BorderSide(color: Colors.white12),
+    return GestureDetector(
+      key: ValueKey(player.name), // Key Penting
+      onTap: () => _handlePlayerTap(index), // Aksi Tap
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? AppColors.electricCyan.withValues(alpha: 0.3) 
+              : (isStarter ? Colors.blueGrey.withValues(alpha: 0.1) : Colors.black),
+          border: Border(
+            left: BorderSide(color: statusColor, width: 4),
+            top: isSelected ? const BorderSide(color: AppColors.electricCyan, width: 2) : BorderSide.none,
+            bottom: isSelected ? const BorderSide(color: AppColors.electricCyan, width: 2) : const BorderSide(color: Colors.white12),
+            right: isSelected ? const BorderSide(color: AppColors.electricCyan, width: 2) : BorderSide.none,
+          ),
         ),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        
-        // HANDLE DRAG DI KIRI
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.drag_handle, color: Colors.white24),
-            const SizedBox(width: 10),
-            Container(
-              width: 25,
-              alignment: Alignment.center,
-              child: Text("$number", style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-          ],
-        ),
-        
-        // [UPDATE PHASE 4] INFO PEMAIN + STATISTIK
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                player.name, 
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Rajdhani'),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            // Indikator Statistik (Hanya muncul jika > 0)
-            if (player.seasonGoals > 0 || player.seasonAssists > 0)
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          
+          // HANDLE DRAG / INDIKATOR
+          leading: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(isSelected ? Icons.check_circle : Icons.drag_handle, 
+                   color: isSelected ? AppColors.electricCyan : Colors.white24),
+              const SizedBox(width: 10),
               Container(
-                margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.white24)),
-                child: Row(
-                  children: [
-                    if(player.seasonGoals > 0) ...[
-                      const Icon(Icons.sports_soccer, size: 12, color: AppColors.neonYellow),
-                      const SizedBox(width: 4),
-                      Text("${player.seasonGoals}", style: const TextStyle(color: AppColors.neonYellow, fontSize: 10, fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 8),
-                    ],
-                    if(player.seasonAssists > 0) ...[
-                      const Icon(Icons.group_add, size: 12, color: AppColors.hotPink),
-                      const SizedBox(width: 4),
-                      Text("${player.seasonAssists}", style: const TextStyle(color: AppColors.hotPink, fontSize: 10, fontWeight: FontWeight.bold)),
-                    ]
-                  ],
-                ),
-              )
-          ],
-        ),
-        
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(player.position, style: const TextStyle(color: AppColors.neonYellow, fontWeight: FontWeight.bold, fontSize: 12)),
-                const SizedBox(width: 10),
-                Text("RTG: ${player.rating}", style: const TextStyle(color: Colors.white54, fontSize: 10)),
-                const SizedBox(width: 10),
-                Text("APPS: ${player.seasonAppearances}", style: const TextStyle(color: Colors.white54, fontSize: 10)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            // Stamina Bar Kecil
-            Container(
-              height: 4,
-              width: 100,
-              decoration: BoxDecoration(color: Colors.grey[800], borderRadius: BorderRadius.circular(2)),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: stamina,
-                child: Container(color: stamina > 0.5 ? Colors.green : Colors.red),
+                width: 25,
+                alignment: Alignment.center,
+                child: Text("${index + 1}", style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 16)),
               ),
-            ),
-          ],
-        ),
-
-        // TOMBOL PROFIL / MANAGE (KANAN)
-        trailing: IconButton(
-          icon: const Icon(Icons.settings, color: Colors.white54),
-          onPressed: () => _showPlayerOptions(context, player),
+            ],
+          ),
+          
+          // INFO UTAMA
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      player.name, 
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'Rajdhani', fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (player.seasonGoals > 0) 
+                    Container(
+                      margin: const EdgeInsets.only(left: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(border: Border.all(color: AppColors.neonYellow), borderRadius: BorderRadius.circular(3)),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.sports_soccer, size: 8, color: AppColors.neonYellow),
+                          const SizedBox(width: 2),
+                          Text("${player.seasonGoals}", style: const TextStyle(color: AppColors.neonYellow, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    )
+                ],
+              ),
+            ],
+          ),
+          
+          // STATISTIK & PROGRESS
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(3)),
+                    child: Text(player.position, style: const TextStyle(color: AppColors.neonYellow, fontWeight: FontWeight.bold, fontSize: 10)),
+                  ),
+                  const SizedBox(width: 8),
+                  Text("RTG: ${player.rating}", style: const TextStyle(color: Colors.white, fontSize: 11)),
+                  const SizedBox(width: 8),
+                  Text("APPS: ${player.seasonAppearances}", style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              // Stamina Bar
+              Row(
+                children: [
+                  const Text("STM", style: TextStyle(color: Colors.grey, fontSize: 9)),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey[800], borderRadius: BorderRadius.circular(2)),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft, 
+                        widthFactor: stamina, 
+                        child: Container(color: stamina > 0.5 ? Colors.green : Colors.red)
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              
+              // XP Bar
+              Row(
+                children: [
+                  const Text("EXP", style: TextStyle(color: AppColors.neonYellow, fontSize: 9, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Container(
+                          height: 6,
+                          decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(2)),
+                        ),
+                        FractionallySizedBox(
+                          widthFactor: xpProgress,
+                          child: Container(
+                            height: 6,
+                            decoration: BoxDecoration(color: AppColors.neonYellow, borderRadius: BorderRadius.circular(2)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text("${player.currentXp}/${player.xpToNextLevel}", style: const TextStyle(color: Colors.grey, fontSize: 9)),
+                ],
+              ),
+            ],
+          ),
+          
+          // Tombol Gear (Detail)
+          trailing: IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white24, size: 20),
+            onPressed: () => _showActionMenu(context, player),
+          ),
         ),
       ),
     );
   }
 
-  // --- LOGIKA HEAL ALL TEAM ---
+  // --- MENU POPUP ---
+  void _showActionMenu(BuildContext context, Player player) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.electricCyan, width: 2))),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Manage ${player.name}", style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'Rajdhani', fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.local_hospital, color: Colors.green),
+                title: const Text("Heal Player (\$50)", style: TextStyle(color: Colors.white)), // Hapus Const
+                onTap: () {
+                  if (player.stamina < 1.0) {
+                    final managerBloc = context.read<ManagerBloc>();
+                    int money = (managerBloc.state is ManagerLoaded) ? (managerBloc.state as ManagerLoaded).money : 0;
+                    if (money >= 50) {
+                      managerBloc.add(const ModifyMoney(-50));
+                      context.read<SquadBloc>().add(RecoverStamina(player));
+                      Navigator.pop(context);
+                      // Hapus Const
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Recovered!"), backgroundColor: Colors.green));
+                    } else {
+                      Navigator.pop(context);
+                      // Hapus Const
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Not enough money!"), backgroundColor: Colors.red));
+                    }
+                  } else {
+                    Navigator.pop(context);
+                    // Hapus Const
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player is already fit!")));
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.monetization_on, color: Colors.amber),
+                title: const Text("Sell Player (+\$200)", style: TextStyle(color: Colors.white)), // Hapus Const
+                onTap: () {
+                  context.read<ManagerBloc>().add(const ModifyMoney(200));
+                  context.read<SquadBloc>().add(SellPlayer(player));
+                  Navigator.pop(context);
+                  // Hapus Const
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Sold!"), backgroundColor: AppColors.neonYellow));
+                },
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+  // --- POPUP HEAL ALL ---
   void _showHealAllDialog(BuildContext context) {
     final state = context.read<SquadBloc>().state;
     if (state is SquadLoaded) {
-      // Hitung total biaya (Misal $20 per pemain yang lelah)
       int injuredCount = state.players.where((p) => p.stamina < 1.0).length;
       int cost = injuredCount * 20;
 
       if (injuredCount == 0) {
+        // Hapus Const
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Team is fully fit!")));
         return;
       }
@@ -237,9 +404,11 @@ class SquadScreen extends StatelessWidget {
                   managerBloc.add(ModifyMoney(-cost));
                   context.read<SquadBloc>().add(RecoverAllStamina());
                   Navigator.pop(context);
+                  // Hapus Const
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Team Fully Recovered!"), backgroundColor: Colors.green));
                 } else {
                   Navigator.pop(context);
+                  // Hapus Const
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Insufficient Funds!"), backgroundColor: Colors.red));
                 }
               }, 
@@ -249,96 +418,5 @@ class SquadScreen extends StatelessWidget {
         )
       );
     }
-  }
-
-  // --- LOGIKA OPSI INDIVIDUAL ---
-  void _showPlayerOptions(BuildContext context, Player player) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.black,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.electricCyan, width: 2))),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(player.name, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Rajdhani')),
-              Text("${player.position} | Rating ${player.rating}", style: const TextStyle(color: Colors.grey)),
-              
-              const SizedBox(height: 20),
-              
-              // [UPDATE PHASE 4] DETAIL STATISTIK
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatItem("GOALS", "${player.seasonGoals}", AppColors.neonYellow),
-                    _buildStatItem("ASSISTS", "${player.seasonAssists}", AppColors.hotPink),
-                    _buildStatItem("APPS", "${player.seasonAppearances}", Colors.white),
-                    _buildStatItem("CARDS", "${player.seasonYellowCards}", Colors.yellow),
-                  ],
-                ),
-              ),
-              
-              const Divider(color: Colors.white24, height: 30),
-
-              // OPSI HEAL SINGLE
-              ListTile(
-                leading: const Icon(Icons.local_hospital, color: Colors.green),
-                title: const Text("Heal Player", style: TextStyle(color: Colors.white)),
-                subtitle: const Text("Cost: \$50", style: TextStyle(color: Colors.grey)),
-                trailing: player.stamina >= 1.0 ? const Icon(Icons.check, color: Colors.green) : null,
-                onTap: () {
-                  if (player.stamina < 1.0) {
-                    final managerBloc = context.read<ManagerBloc>();
-                    int money = 0;
-                    if (managerBloc.state is ManagerLoaded) money = (managerBloc.state as ManagerLoaded).money;
-
-                    if (money >= 50) {
-                      managerBloc.add(ModifyMoney(-50));
-                      context.read<SquadBloc>().add(RecoverStamina(player));
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Healed!"), backgroundColor: Colors.green));
-                    } else {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Not enough money!"), backgroundColor: Colors.red));
-                    }
-                  } else {
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-
-              // OPSI JUAL
-              ListTile(
-                leading: const Icon(Icons.monetization_on, color: Colors.amber),
-                title: const Text("Sell Player", style: TextStyle(color: Colors.white)),
-                subtitle: const Text("Get \$200", style: TextStyle(color: Colors.grey)),
-                onTap: () {
-                  context.read<ManagerBloc>().add(ModifyMoney(200));
-                  context.read<SquadBloc>().add(SellPlayer(player));
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Sold!"), backgroundColor: AppColors.neonYellow));
-                },
-              ),
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Rajdhani')),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
-      ],
-    );
   }
 }

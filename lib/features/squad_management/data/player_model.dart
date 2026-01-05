@@ -15,9 +15,9 @@ class Player extends Equatable {
   final int seasonAppearances;
   final double averageRating;
 
-  // [BARU] RPG PROGRESSION
-  final int currentXp;      // XP yang dimiliki
-  final int xpToNextLevel;  // Target XP untuk naik level (Default 1000)
+  // [BARU] RPG PROGRESSION (XP)
+  final int currentXp;      // XP saat ini
+  final int xpToNextLevel;  // Target XP (Default 1000)
 
   const Player({
     required this.name,
@@ -68,6 +68,7 @@ class Player extends Equatable {
     );
   }
 
+  // Data Dummy
   static List<Player> get dummySquad => [
     const Player(name: "K. NAKAMURA", position: "FWD", rating: 82),
     const Player(name: "J. STEEL", position: "FWD", rating: 78),
@@ -89,6 +90,6 @@ class Player extends Equatable {
   List<Object?> get props => [
     name, position, rating, stamina, imagePath, 
     seasonGoals, seasonAssists, seasonAppearances, averageRating,
-    currentXp, xpToNextLevel // Jangan lupa daftarkan di props
+    currentXp, xpToNextLevel // [PENTING] Daftarkan props XP
   ];
 }
