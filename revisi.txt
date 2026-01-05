@@ -10,4 +10,5 @@ card sistem lebih kompleks
 avatar pemain ,statistis ovr/power pemain 
 nama pemain bebas diganti
 database tim / player
-customize nama manager/tim / logo 
+customize nama manager/tim / logo
+saat akhir musim reset cuma statistic liga bukan stats player di tim 

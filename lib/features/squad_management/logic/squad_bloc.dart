@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/services/save_service.dart'; // Pastikan import ini ada
+import '../../../core/services/save_service.dart';
 import '../data/player_model.dart';
 import 'squad_event.dart';
 import 'squad_state.dart';
@@ -84,7 +84,6 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
       }
     });
 
-    // [BAGIAN PENTING: UPDATE MATCH STATS & XP]
     on<UpdatePlayerMatchStats>((event, emit) {
       if (state is SquadLoaded) {
         for (int i = 0; i < _currentSquad.length; i++) {
@@ -133,8 +132,31 @@ class SquadBloc extends Bloc<SquadEvent, SquadState> {
           }
         }
         
-        // [WAJIB ADA] Simpan ke Memori HP
         SaveService.saveSquad(_currentSquad); 
+        emit(SquadLoaded(List.from(_currentSquad)));
+      }
+    });
+
+    // [BARU] LOGIC RESET MUSIM (STATISTIK KEMBALI 0, XP TETAP)
+    on<ResetSeasonStats>((event, emit) {
+      if (state is SquadLoaded) {
+        // Reset statistik setiap pemain
+        List<Player> resetSquad = _currentSquad.map((p) {
+          return p.copyWith(
+            seasonGoals: 0,
+            seasonAssists: 0,
+            seasonYellowCards: 0,
+            seasonRedCards: 0,
+            seasonAppearances: 0,
+            averageRating: 6.0, // Reset rating rata-rata ke default
+            // XP, Level, Stamina TIDAK DIUBAH (Progression aman)
+          );
+        }).toList();
+
+        _currentSquad = resetSquad;
+        
+        // Simpan squad yang sudah di-reset
+        SaveService.saveSquad(_currentSquad);
         
         emit(SquadLoaded(List.from(_currentSquad)));
       }

@@ -7,14 +7,19 @@ abstract class LeagueState extends Equatable {
   List<Object> get props => [];
 }
 
+// State Awal
 class LeagueInitial extends LeagueState {}
 
+// [WAJIB ADA] Agar tidak error "undefined name 'LeagueLoading'"
+class LeagueLoading extends LeagueState {}
+
+// State Data Loaded
 class LeagueLoaded extends LeagueState {
   final List<TeamModel> teams; // Klasemen
-  final List<List<FixtureModel>> schedule; // Jadwal [Week 1, Week 2...]
-  final int currentMatchday; // 1 - 38
+  final List<List<FixtureModel>> schedule; // Jadwal
+  final int currentMatchday;
   
-  // Statistik Liga
+  // Statistik
   final List<PlayerStatEntry> topScorers;
   final List<PlayerStatEntry> topAssists;
 
@@ -26,19 +31,27 @@ class LeagueLoaded extends LeagueState {
     this.topAssists = const [],
   });
 
+  // [FITUR ANDA: DIPERTAHANKAN]
   // Helper: Ambil lawan tim kita di matchday saat ini
   String getNextOpponent() {
     if (currentMatchday > schedule.length) return "Season Finished";
     
-    // Cari fixture dimana salah satu timnya adalah "MISFIT UNITED"
-    final currentFixtures = schedule[currentMatchday - 1];
-    final myFixture = currentFixtures.firstWhere(
-      (f) => f.homeTeam == "MISFIT UNITED" || f.awayTeam == "MISFIT UNITED",
-      orElse: () => FixtureModel(homeTeam: "-", awayTeam: "-", matchday: 0),
-    );
+    // Safety check: pastikan index valid
+    if (currentMatchday - 1 < 0 || currentMatchday - 1 >= schedule.length) return "-";
 
-    if (myFixture.homeTeam == "MISFIT UNITED") return myFixture.awayTeam;
-    return myFixture.homeTeam;
+    final currentFixtures = schedule[currentMatchday - 1];
+    
+    try {
+      final myFixture = currentFixtures.firstWhere(
+        (f) => f.homeTeam == "MISFIT UNITED" || f.awayTeam == "MISFIT UNITED",
+        orElse: () => FixtureModel(homeTeam: "-", awayTeam: "-", matchday: 0),
+      );
+
+      if (myFixture.homeTeam == "MISFIT UNITED") return myFixture.awayTeam;
+      return myFixture.homeTeam;
+    } catch (e) {
+      return "-";
+    }
   }
 
   @override

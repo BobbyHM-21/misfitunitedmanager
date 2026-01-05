@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/services/save_service.dart'; // [BARU] Import Save Service
+import '../../../core/services/save_service.dart';
 import '../data/league_models.dart';
 import 'league_state.dart';
 
@@ -16,60 +16,53 @@ class LeagueCubit extends Cubit<LeagueState> {
     "VELOCITY STAR", "ECHO RANGERS", "PHANTOM OPERATORS", "IRON LEGION", "NOVA UNION"
   ];
 
-  // 1. Inisialisasi Liga (Awal Musim atau Load Game)
-  void initLeague() async { // [UPDATE] Jadi Async untuk Load
-    // Coba Load Data
+  // --- 1. INISIALISASI LIGA (LOAD / NEW) ---
+  void initLeague() async {
+    // Tampilkan Loading State agar UI tahu
+    emit(LeagueLoading());
+
+    // Coba Load Data dari HP
     Map<String, dynamic>? savedData = await SaveService.loadLeague();
 
     if (savedData != null) {
-      // --- LOAD GAME ---
-      List<TeamModel> loadedTeams = (savedData['teams'] as List)
-          .map((e) => TeamModel.fromJson(e)).toList();
-      
-      // Load Schedule (List of List)
-      List<List<FixtureModel>> loadedSchedule = (savedData['schedule'] as List)
-          .map((round) => (round as List).map((f) => FixtureModel.fromJson(f)).toList())
-          .toList();
+      // [LOAD GAME]
+      try {
+        List<TeamModel> loadedTeams = (savedData['teams'] as List)
+            .map((e) => TeamModel.fromJson(e)).toList();
+        
+        List<List<FixtureModel>> loadedSchedule = (savedData['schedule'] as List)
+            .map((round) => (round as List).map((f) => FixtureModel.fromJson(f)).toList())
+            .toList();
 
-      List<PlayerStatEntry> loadedScorers = (savedData['topScorers'] as List)
-          .map((e) => PlayerStatEntry.fromJson(e)).toList();
+        List<PlayerStatEntry> loadedScorers = (savedData['topScorers'] as List)
+            .map((e) => PlayerStatEntry.fromJson(e)).toList();
 
-      emit(LeagueLoaded(
-        teams: loadedTeams,
-        schedule: loadedSchedule,
-        currentMatchday: savedData['currentMatchday'],
-        topScorers: loadedScorers,
-        topAssists: [], // Tambahkan jika perlu
-      ));
+        emit(LeagueLoaded(
+          teams: loadedTeams,
+          schedule: loadedSchedule,
+          currentMatchday: savedData['currentMatchday'],
+          topScorers: loadedScorers,
+          topAssists: [],
+        ));
+      } catch (e) {
+        // Jika data corrupt, buat baru
+        print("Error loading data: $e");
+        startNewSeason(); 
+      }
     } else {
-      // --- NEW GAME (Fitur Lama) ---
-      List<TeamModel> initialTeams = _teamNames.map((name) {
-        return TeamModel(name: name, isPlayerTeam: name == "MISFIT UNITED");
-      }).toList();
-
-      var schedule = _generateSchedule(_teamNames);
-
-      emit(LeagueLoaded(
-        teams: initialTeams,
-        schedule: schedule,
-        currentMatchday: 1, 
-        topScorers: [],
-        topAssists: [],
-      ));
-      
-      // Simpan kondisi awal
-      _saveCurrentState(initialTeams, schedule, 1, []);
+      // [NEW GAME]
+      startNewSeason();
     }
   }
 
-  // 2. Fungsi Selesai Match (TETAP SAMA + SAVE)
+  // --- 2. LOGIKA SELESAI MATCH ---
   void finishMatchday(int userGoals, int enemyGoals, List<String> userScorers) {
     if (state is LeagueLoaded) {
       final currentState = state as LeagueLoaded;
       int currentDayIndex = currentState.currentMatchday - 1; 
       
+      // Cek apakah musim sudah selesai
       if (currentDayIndex >= currentState.schedule.length) {
-        // Reset season logic bisa ditambahkan di sini (hapus save)
         return;
       }
 
@@ -78,23 +71,25 @@ class LeagueCubit extends Cubit<LeagueState> {
       List<FixtureModel> updatedFixtures = [];
       List<PlayerStatEntry> updatedScorers = List.from(currentState.topScorers);
 
-      // A. Update Statistik User
+      // A. Update Statistik User (Pemain Kita)
       for (var scorerName in userScorers) {
         _updateTopStats(updatedScorers, scorerName, "MISFIT UNITED", 1);
       }
 
-      // B. Simulasi Match Lain
+      // B. Simulasi Match Lain (AI vs AI)
       for (var fixture in currentFixtures) {
         String home = fixture.homeTeam;
         String away = fixture.awayTeam;
         int hScore = 0;
         int aScore = 0;
 
+        // Jika ini match kita, pakai skor asli dari parameter
         if (home == "MISFIT UNITED") {
           hScore = userGoals; aScore = enemyGoals;
         } else if (away == "MISFIT UNITED") {
           aScore = userGoals; hScore = enemyGoals;
         } else {
+          // Simulasi Random
           hScore = _rng.nextInt(4); 
           aScore = _rng.nextInt(4);
           
@@ -102,6 +97,7 @@ class LeagueCubit extends Cubit<LeagueState> {
           if (aScore > 0) _generateAiScorers(updatedScorers, away, aScore);
         }
 
+        // Update Poin & Gol Tim
         _updateTeamStats(updatedTeams, home, hScore, aScore);
         _updateTeamStats(updatedTeams, away, aScore, hScore);
 
@@ -110,20 +106,23 @@ class LeagueCubit extends Cubit<LeagueState> {
         ));
       }
 
+      // Update Jadwal
       List<List<FixtureModel>> fullSchedule = List.from(currentState.schedule);
       fullSchedule[currentDayIndex] = updatedFixtures;
 
+      // Sort Klasemen (Poin -> Selisih Gol -> Menang)
       updatedTeams.sort((a, b) {
         int pointCmp = b.points.compareTo(a.points);
         if (pointCmp != 0) return pointCmp;
         return (b.won - b.lost).compareTo(a.won - a.lost);
       });
 
+      // Sort Top Skor
       updatedScorers.sort((a, b) => b.value.compareTo(a.value));
 
       int nextMatchday = currentState.currentMatchday + 1;
 
-      // [BARU] Simpan ke Memori
+      // Simpan Data Terbaru
       _saveCurrentState(updatedTeams, fullSchedule, nextMatchday, updatedScorers);
 
       emit(LeagueLoaded(
@@ -131,11 +130,54 @@ class LeagueCubit extends Cubit<LeagueState> {
         schedule: fullSchedule,
         currentMatchday: nextMatchday,
         topScorers: updatedScorers.take(20).toList(),
+        topAssists: [],
       ));
     }
   }
 
-  // [BARU] Helper Private untuk Save
+  // --- 3. FITUR AKHIR MUSIM ---
+
+  // Hitung Hadiah Uang (Prize Money)
+  int getSeasonPrize() {
+    if (state is LeagueLoaded) {
+      final teams = (state as LeagueLoaded).teams;
+      int position = teams.indexWhere((t) => t.isPlayerTeam) + 1;
+      if (position == 0) return 0;
+      
+      // Juara 1 = $5000, Posisi 20 = $250
+      return 250 + ((21 - position) * 250);
+    }
+    return 0;
+  }
+
+  // Mulai Musim Baru (Reset Liga)
+  void startNewSeason() {
+    emit(LeagueLoading());
+
+    // Reset Statistik Tim
+    List<TeamModel> newTeams = _teamNames.map((name) {
+      return TeamModel(name: name, isPlayerTeam: name == "MISFIT UNITED");
+    }).toList();
+
+    // Generate Jadwal Baru
+    var newSchedule = _generateSchedule(_teamNames);
+    int newMatchday = 1;
+    List<PlayerStatEntry> emptyScorers = [];
+
+    // Simpan Kondisi Awal Musim Baru
+    _saveCurrentState(newTeams, newSchedule, newMatchday, emptyScorers);
+
+    emit(LeagueLoaded(
+      teams: newTeams,
+      schedule: newSchedule,
+      currentMatchday: newMatchday,
+      topScorers: emptyScorers,
+      topAssists: [],
+    ));
+  }
+
+  // --- HELPER FUNCTIONS ---
+
   void _saveCurrentState(List<TeamModel> teams, List<List<FixtureModel>> schedule, int matchday, List<PlayerStatEntry> scorers) {
     SaveService.saveLeague({
       'teams': teams.map((e) => e.toJson()).toList(),
@@ -145,15 +187,16 @@ class LeagueCubit extends Cubit<LeagueState> {
     });
   }
 
-  // --- HELPER FUNCTIONS (TETAP SAMA) ---
-
   void _updateTeamStats(List<TeamModel> teams, String teamName, int goalsFor, int goalsAgainst) {
     int index = teams.indexWhere((t) => t.name == teamName);
     if (index != -1) {
       var t = teams[index];
       int pts = 0;
-      if (goalsFor > goalsAgainst) pts = 3;
-      else if (goalsFor == goalsAgainst) pts = 1;
+      if (goalsFor > goalsAgainst) {
+        pts = 3;
+      } else if (goalsFor == goalsAgainst) {
+        pts = 1;
+      }
 
       teams[index] = t.copyWith(
         played: t.played + 1,
@@ -186,18 +229,24 @@ class LeagueCubit extends Cubit<LeagueState> {
   }
 
   List<List<FixtureModel>> _generateSchedule(List<String> teams) {
+    List<String> shuffledTeams = List.from(teams);
+    // Pastikan user tetap di posisi awal agar mudah di-track, tapi lawan diacak
+    shuffledTeams.remove("MISFIT UNITED");
+    shuffledTeams.shuffle();
+    shuffledTeams.insert(0, "MISFIT UNITED");
+
     List<List<FixtureModel>> schedule = [];
-    int totalRounds = (teams.length - 1) * 2; 
-    int matchesPerRound = teams.length ~/ 2;
-    List<String> roundTeams = List.from(teams);
+    int totalRounds = (shuffledTeams.length - 1) * 2; 
+    int matchesPerRound = shuffledTeams.length ~/ 2;
+    List<String> roundTeams = List.from(shuffledTeams);
 
     for (int round = 0; round < totalRounds; round++) {
       List<FixtureModel> matchdayFixtures = [];
       for (int match = 0; match < matchesPerRound; match++) {
-        int homeIdx = (round + match) % (teams.length - 1);
-        int awayIdx = (teams.length - 1 - match + round) % (teams.length - 1);
+        int homeIdx = (round + match) % (shuffledTeams.length - 1);
+        int awayIdx = (shuffledTeams.length - 1 - match + round) % (shuffledTeams.length - 1);
         
-        if (match == 0) awayIdx = teams.length - 1;
+        if (match == 0) awayIdx = shuffledTeams.length - 1;
 
         String home = roundTeams[homeIdx];
         String away = roundTeams[awayIdx];
