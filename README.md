@@ -41,7 +41,7 @@ Fokus saat ini: Struktur kompetisi jangka panjang.
 - [x] **Season Schedule (Fixtures):**
   - Jadwal pertandingan terstruktur (Matchday 1 - 38) vs Lawan spesifik.
   - Reset musim setelah liga berakhir.
-- [ ] **Player Progression (RPG):**
+- [x] **Player Progression (RPG):**
   - Sistem **Experience (XP)** untuk pemain setelah bertanding.
   - **Level Up:** Meningkatkan Rating pemain jika XP penuh.
 
