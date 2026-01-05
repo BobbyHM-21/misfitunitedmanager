@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/constants/app_assets.dart';
 import '../../data/player_model.dart';
 import '../../logic/squad_bloc.dart';
 import '../../logic/squad_event.dart';

@@ -32,7 +32,7 @@ class _SquadScreenState extends State<SquadScreen> {
     context.read<SquadBloc>().add(LoadSquad());
   }
 
-  // --- LOGIKA TAP TO MOVE (DIPERBAIKI) ---
+  // --- LOGIKA TAP TO MOVE ---
   void _handlePlayerTap(int index) {
     setState(() {
       if (_selectedPlayerIndex == null) {
@@ -46,9 +46,7 @@ class _SquadScreenState extends State<SquadScreen> {
         int oldIndex = _selectedPlayerIndex!;
         int newIndex = index;
 
-        // [FIX PENTING] Koreksi Indeks untuk ReorderableListView
-        // Jika memindahkan item ke BAWAH (index lebih besar), kita harus tambah +1
-        // karena saat item diambil, index di bawahnya akan bergeser naik.
+        // Koreksi Indeks untuk ReorderableListView (Fix Bug Indexing)
         if (oldIndex < newIndex) {
           newIndex += 1;
         }
@@ -57,7 +55,7 @@ class _SquadScreenState extends State<SquadScreen> {
         context.read<SquadBloc>().add(ReorderSquad(oldIndex, newIndex));
         _selectedPlayerIndex = null; // Reset seleksi
         
-        // Feedback UI (Hapus const agar tidak error)
+        // Feedback UI
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -138,7 +136,7 @@ class _SquadScreenState extends State<SquadScreen> {
                     padding: const EdgeInsets.only(bottom: 50),
                     itemCount: state.players.length,
                     
-                    // Handler Drag & Drop (Fitur Lama)
+                    // Handler Drag & Drop
                     onReorder: (oldIndex, newIndex) {
                       context.read<SquadBloc>().add(ReorderSquad(oldIndex, newIndex));
                     },
@@ -148,7 +146,7 @@ class _SquadScreenState extends State<SquadScreen> {
                       final isStarter = index < 11;
                       final isSelected = _selectedPlayerIndex == index;
                       
-                      // PANGGIL WIDGET ITEM (INLINE AGAR KODE LENGKAP)
+                      // PANGGIL WIDGET ITEM
                       return _buildPlayerListItem(context, player, isStarter, index, isSelected);
                     },
                   );
@@ -162,7 +160,7 @@ class _SquadScreenState extends State<SquadScreen> {
     );
   }
 
-  // --- WIDGET ITEM PEMAIN (DIGABUNG DISINI) ---
+  // --- WIDGET ITEM PEMAIN ---
   Widget _buildPlayerListItem(BuildContext context, Player player, bool isStarter, int index, bool isSelected) {
     Color statusColor = isStarter ? AppColors.electricCyan : Colors.grey;
     double stamina = player.stamina;
@@ -170,7 +168,7 @@ class _SquadScreenState extends State<SquadScreen> {
     double xpProgress = (player.currentXp / targetXp).clamp(0.0, 1.0);
 
     return GestureDetector(
-      key: ValueKey(player.name), // Key Penting
+      key: ValueKey(player.name), 
       onTap: () => _handlePlayerTap(index), // Aksi Tap
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -313,24 +311,52 @@ class _SquadScreenState extends State<SquadScreen> {
     );
   }
 
-  // --- MENU POPUP ---
+  // --- MENU POPUP DENGAN STATISTIK LENGKAP ---
   void _showActionMenu(BuildContext context, Player player) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.black,
+      isScrollControlled: true, // Agar konten penuh terlihat
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return Container(
           padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.electricCyan, width: 2))),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: AppColors.electricCyan, width: 2)),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Manage ${player.name}", style: const TextStyle(color: Colors.white, fontSize: 18, fontFamily: 'Rajdhani', fontWeight: FontWeight.bold)),
+              // Header
+              Text("Manage ${player.name}", style: const TextStyle(color: Colors.white, fontSize: 24, fontFamily: 'Rajdhani', fontWeight: FontWeight.bold)),
+              Text("${player.position} | Rating ${player.rating}", style: const TextStyle(color: Colors.grey, fontSize: 14)),
+              
               const SizedBox(height: 20),
+
+              // [DIPULIHKAN] STATISTIK LENGKAP
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white10, 
+                  borderRadius: BorderRadius.circular(8)
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem("GOALS", "${player.seasonGoals}", AppColors.neonYellow),
+                    _buildStatItem("ASSISTS", "${player.seasonAssists}", AppColors.hotPink),
+                    _buildStatItem("APPS", "${player.seasonAppearances}", Colors.white),
+                    _buildStatItem("RATING", "${player.averageRating}", Colors.blueAccent),
+                  ],
+                ),
+              ),
+              
+              const Divider(color: Colors.white24, height: 30),
+              
+              // Menu Aksi
               ListTile(
                 leading: const Icon(Icons.local_hospital, color: Colors.green),
-                title: const Text("Heal Player (\$50)", style: TextStyle(color: Colors.white)), // Hapus Const
+                title: const Text("Heal Player (\$50)", style: TextStyle(color: Colors.white)),
                 onTap: () {
                   if (player.stamina < 1.0) {
                     final managerBloc = context.read<ManagerBloc>();
@@ -339,35 +365,42 @@ class _SquadScreenState extends State<SquadScreen> {
                       managerBloc.add(const ModifyMoney(-50));
                       context.read<SquadBloc>().add(RecoverStamina(player));
                       Navigator.pop(context);
-                      // Hapus Const
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Recovered!"), backgroundColor: Colors.green));
                     } else {
                       Navigator.pop(context);
-                      // Hapus Const
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Not enough money!"), backgroundColor: Colors.red));
                     }
                   } else {
                     Navigator.pop(context);
-                    // Hapus Const
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player is already fit!")));
                   }
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.monetization_on, color: Colors.amber),
-                title: const Text("Sell Player (+\$200)", style: TextStyle(color: Colors.white)), // Hapus Const
+                title: const Text("Sell Player (+\$200)", style: TextStyle(color: Colors.white)),
                 onTap: () {
                   context.read<ManagerBloc>().add(const ModifyMoney(200));
                   context.read<SquadBloc>().add(SellPlayer(player));
                   Navigator.pop(context);
-                  // Hapus Const
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Sold!"), backgroundColor: AppColors.neonYellow));
                 },
               ),
+              const SizedBox(height: 10),
             ],
           ),
         );
       }
+    );
+  }
+
+  // Widget Helper untuk Statistik
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Rajdhani')),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+      ],
     );
   }
 
@@ -379,7 +412,6 @@ class _SquadScreenState extends State<SquadScreen> {
       int cost = injuredCount * 20;
 
       if (injuredCount == 0) {
-        // Hapus Const
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Team is fully fit!")));
         return;
       }
@@ -404,11 +436,9 @@ class _SquadScreenState extends State<SquadScreen> {
                   managerBloc.add(ModifyMoney(-cost));
                   context.read<SquadBloc>().add(RecoverAllStamina());
                   Navigator.pop(context);
-                  // Hapus Const
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Team Fully Recovered!"), backgroundColor: Colors.green));
                 } else {
                   Navigator.pop(context);
-                  // Hapus Const
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Insufficient Funds!"), backgroundColor: Colors.red));
                 }
               }, 

@@ -4,28 +4,30 @@ import 'manager_event.dart';
 import 'manager_state.dart';
 
 class ManagerBloc extends Bloc<ManagerEvent, ManagerState> {
-  // Default Data
-  int _currentMoney = 500;
-  String _managerName = "Manager";
-  String _clubName = "Misfit United";
-  String _division = "Division 3";
-  String _avatarPath = "assets/images/avatar_manager.png";
+  // Data Profil Manager (Bisa dijadikan final)
+  final String _managerName = "Manager";
+  final String _clubName = "Misfit United";
+  final String _division = "Division 3";
+  final String _avatarPath = "assets/images/avatar_manager.png";
+  
+  // Data Dinamis
+  int _currentMoney = 500; 
 
   ManagerBloc() : super(ManagerInitial()) {
     
     // 1. LOGIC LOAD DATA
     on<LoadManagerData>((event, emit) async {
-      emit(ManagerLoading()); 
+      emit(ManagerLoading());
       
-      // Load Money
+      // Ambil data uang dari HP
       final savedMoney = await SaveService.loadMoney();
       if (savedMoney != null) {
         _currentMoney = savedMoney;
       } else {
-        _currentMoney = 500;
+        _currentMoney = 50000;
       }
       
-      // Emit State with ALL required fields
+      // Kirim State Lengkap (Named Arguments)
       emit(ManagerLoaded(
         money: _currentMoney,
         name: _managerName,
@@ -37,18 +39,13 @@ class ManagerBloc extends Bloc<ManagerEvent, ManagerState> {
 
     // 2. LOGIC UBAH UANG
     on<ModifyMoney>((event, emit) {
-      if (state is ManagerLoaded) {
-        // Update money based on previous state
-        _currentMoney = (state as ManagerLoaded).money + event.amount;
-      } else {
-        // Fallback if state wasn't loaded
-        _currentMoney += event.amount;
-      }
+      // Hitung uang baru
+      _currentMoney += event.amount;
 
-      // Save to storage
+      // Simpan
       SaveService.saveMoney(_currentMoney);
       
-      // Emit State with ALL required fields
+      // Emit State Lengkap
       emit(ManagerLoaded(
         money: _currentMoney,
         name: _managerName,

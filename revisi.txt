@@ -4,4 +4,5 @@ substite
 rating match/league/cup /mvp/player of the season
 other turnamen
 market transfer, sell now harga murah, nego 
-formation ,taktik
+formasi ,taktik
+tim ovr
