@@ -2,9 +2,9 @@ import 'package:equatable/equatable.dart';
 
 class Player extends Equatable {
   final String name;
-  final String position; 
+  final String position; // FWD, MID, DEF, GK
   final int rating;
-  final double stamina; 
+  final double stamina; // 0.0 - 1.0
   final String? imagePath;
   
   // STATISTIK MUSIM
@@ -15,7 +15,7 @@ class Player extends Equatable {
   final int seasonAppearances;
   final double averageRating;
 
-  // RPG PROGRESSION
+  // RPG PROGRESSION (XP)
   final int currentXp;      
   final int xpToNextLevel;  
 
@@ -35,7 +35,7 @@ class Player extends Equatable {
     this.xpToNextLevel = 1000,
   });
 
-  // [BARU] CONVERT DATA KE JSON (UNTUK DISIMPAN)
+  // [PENTING] Pastikan field XP ada di sini
   Map<String, dynamic> toJson() {
     return {
       'name': name,
@@ -49,12 +49,12 @@ class Player extends Equatable {
       'seasonRedCards': seasonRedCards,
       'seasonAppearances': seasonAppearances,
       'averageRating': averageRating,
-      'currentXp': currentXp,
-      'xpToNextLevel': xpToNextLevel,
+      'currentXp': currentXp,        // <--- WAJIB ADA
+      'xpToNextLevel': xpToNextLevel,// <--- WAJIB ADA
     };
   }
 
-  // [BARU] MEMBUAT PLAYER DARI JSON (SAAT DILOAD)
+  // [PENTING] Pastikan field XP dimuat kembali di sini
   factory Player.fromJson(Map<String, dynamic> json) {
     return Player(
       name: json['name'],
@@ -68,8 +68,8 @@ class Player extends Equatable {
       seasonRedCards: json['seasonRedCards'] ?? 0,
       seasonAppearances: json['seasonAppearances'] ?? 0,
       averageRating: (json['averageRating'] as num).toDouble(),
-      currentXp: json['currentXp'] ?? 0,
-      xpToNextLevel: json['xpToNextLevel'] ?? 1000,
+      currentXp: json['currentXp'] ?? 0,          // <--- WAJIB ADA
+      xpToNextLevel: json['xpToNextLevel'] ?? 1000,// <--- WAJIB ADA
     );
   }
 
